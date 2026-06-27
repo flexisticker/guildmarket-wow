@@ -1,0 +1,9 @@
+package-as: GuildMarket
+
+ignore:
+  - .pkgmeta
+  - .gitignore
+  - .github
+  - CHANGELOG.md
+  - README.md
+  - LICENSE
