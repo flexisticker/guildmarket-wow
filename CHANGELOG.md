@@ -5,6 +5,16 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [0.9.10-beta] · 2026-06-27 · Invite-Button, offene Standardrechte
+
+### Added
+- **„Alle einladen"**-Button im Event-Detail-Popup: Ersteller, Offiziere und GM können alle angemeldeten Spieler mit einem Klick per `InviteUnit()` in die Gruppe/Raid einladen
+
+### Changed
+- Alle Standard-Rechte auf Rang 9 (jeder kann posten, löschen und Events erstellen) — GM kann per Config einschränken
+
+---
+
 ## [0.9.9-beta] · 2026-06-27 · Gilden-Kalender mit Event-Anmeldung
 
 ### Added
