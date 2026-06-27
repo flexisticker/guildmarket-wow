@@ -351,16 +351,25 @@ local function BuildInfoFrame()
         lbName:SetPoint("TOPLEFT",csc,"TOPLEFT",122,-rowY-5)
         lbName:SetText(W..name..X); lbName:SetSize(180,16)
 
-        local dot=csc:CreateTexture(nil,"OVERLAY"); dot:SetSize(12,12)
-        dot:SetPoint("TOPLEFT",csc,"TOPLEFT",308,-rowY-7)
+        local dot=csc:CreateTexture(nil,"OVERLAY"); dot:SetSize(16,16)
+        dot:SetPoint("TOPLEFT",csc,"TOPLEFT",306,-rowY-5)
+        local online=IsOnline(name)
         local function UpdateDot()
-            if IsOnline(name) then dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online");  dot:SetVertexColor(1,1,1,1)
-            else                   dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline"); dot:SetVertexColor(1,1,1,0.45) end
+            if IsOnline(name) then
+                dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online")
+                dot:SetVertexColor(1,1,1,1)
+                lbName:SetTextColor(1,1,1,1)
+            else
+                dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline")
+                dot:SetVertexColor(1,1,1,0.35)
+                lbName:SetTextColor(0.5,0.5,0.5,1)
+            end
         end
         UpdateDot(); f:HookScript("OnShow",UpdateDot)
 
         local whisperBtn=CreateFrame("Button",nil,csc,"UIPanelButtonTemplate")
-        whisperBtn:SetSize(100,20); whisperBtn:SetPoint("TOPLEFT",csc,"TOPLEFT",326,-rowY-3)
+        whisperBtn:SetSize(100,20); whisperBtn:SetPoint("TOPLEFT",csc,"TOPLEFT",328,-rowY-3)
+        if not online then whisperBtn:SetAlpha(0.5) end
         whisperBtn:SetText("Fluestern")
         whisperBtn:SetScript("OnClick",function() OpenWhisper(name) end)
         whisperBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_TOP"); GameTooltip:ClearLines(); GameTooltip:AddLine(T.."/w "..name..X); GameTooltip:Show() end)
@@ -388,8 +397,18 @@ local function BuildInfoFrame()
             hint:SetText(Dg.."Roster noch nicht geladen — bitte Sync / Roster neu laden."..X)
             csc:SetHeight(26); return
         end
-        for _,n in ipairs(gm)       do PersonRow("Gildenmeister",G,n) end
-        for _,n in ipairs(officers)  do PersonRow("Offizier",     T,n) end
+        -- Online zuerst sortieren
+        local function SortOnlineFirst(list)
+            table.sort(list,function(a,b)
+                local ao=IsOnline(a) and 1 or 0
+                local bo=IsOnline(b) and 1 or 0
+                if ao~=bo then return ao>bo end
+                return a<b
+            end)
+        end
+        SortOnlineFirst(gm); SortOnlineFirst(officers)
+        for _,n in ipairs(gm)      do PersonRow("Gildenmeister",G,n) end
+        for _,n in ipairs(officers) do PersonRow("Offizier",     T,n) end
     end
     PopulateLeadership()
 
