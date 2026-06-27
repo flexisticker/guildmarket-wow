@@ -1,5 +1,5 @@
 package-as: GuildMarket
-project-id: REPLACE_ME
+project-id: 1589741
 
 ignore:
   - .pkgmeta

@@ -4,7 +4,7 @@
 ## Notes-deDE: Gildeninterner Marktplatz fuer "Der Hohe Rat" — Suche/Biete via Gildensync
 ## Author: MichaModus
 ## Version: 0.9.7-beta
-## X-Curse-Project-ID: REPLACE_ME
+## X-Curse-Project-ID: 1589741
 ## DefaultState: Enabled
 ## X-GitHub: https://github.com/flexisticker/guildmarket-wow
 ## X-License: MIT
