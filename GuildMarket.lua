@@ -542,6 +542,8 @@ local function Toggle()
     if mainFrame:IsShown() then
         mainFrame:Hide()
     else
+        mainFrame:ClearAllPoints()
+        mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         PruneExpired(); RefreshList(); mainFrame:Show()
     end
 end
