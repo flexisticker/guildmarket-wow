@@ -410,7 +410,10 @@ local function BuildUI()
     f:SetScript("OnDragStop",  f.StopMovingOrSizing)
     f:SetFrameStrata("DIALOG")
     f:SetResizable(true)
-    f:SetMinResize(MIN_W, MIN_H)
+    f:SetScript("OnSizeChanged", function(self, w, h)
+    if w < MIN_W then self:SetWidth(MIN_W) end
+    if h < MIN_H then self:SetHeight(MIN_H) end
+end)
     f:Hide()
 
     -- Titel
