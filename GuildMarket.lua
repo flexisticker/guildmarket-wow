@@ -5,8 +5,20 @@
 local MSG_PREFIX  = "GUILDMKT"
 local EXPIRE_SECS = 7 * 24 * 3600
 
-if RegisterAddonMessagePrefix then
+-- Prefix registrieren: TBC Anniversary nutzt C_ChatInfo, Vanilla das Global
+if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+    C_ChatInfo.RegisterAddonMessagePrefix(MSG_PREFIX)
+elseif RegisterAddonMessagePrefix then
     RegisterAddonMessagePrefix(MSG_PREFIX)
+end
+
+-- Kompatibler SendAddonMessage Wrapper
+local function _SendAddonMsg(prefix, msg, channel)
+    if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+        C_ChatInfo.SendAddonMessage(prefix, msg, channel)
+    elseif SendAddonMessage then
+        SendAddonMessage(prefix, msg, channel)
+    end
 end
 
 -- Farben
@@ -41,7 +53,7 @@ end
 
 local function SendGuild(msg)
     if IsInGuild() then
-        SendAddonMessage(MSG_PREFIX, msg, "GUILD")
+        _SendAddonMsg(MSG_PREFIX, msg, "GUILD")
     end
 end
 
