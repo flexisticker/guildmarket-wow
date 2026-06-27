@@ -1137,6 +1137,25 @@ function BuildEventDetailPopup(eventId)
         if isFull then sigBtn:Disable() end
         sigBtn:SetScript("OnClick",function() SignEvent(eventId); RefreshCalendar(); f:Hide() end)
     end
+    -- "Alle einladen"-Button (nur für Ersteller oder GM/Offizier)
+    if ev.creator==me or CanDeleteOthers() then
+        local invBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); invBtn:SetSize(130,22)
+        invBtn:SetPoint("LEFT",sigBtn,"RIGHT",6,0)
+        invBtn:SetText(isDE and "Alle einladen" or "Invite all")
+        invBtn:SetScript("OnClick",function()
+            local invited=0
+            for name in pairs(ev.signups or {}) do
+                if name~=me then InviteUnit(name); invited=invited+1 end
+            end
+            print(T.."[GuildMarkt]"..X.." "..(isDE and "Eingeladen: " or "Invited: ")..G..invited..X..(isDE and " Spieler." or " players."))
+        end)
+        invBtn:SetScript("OnEnter",function(self)
+            GameTooltip:SetOwner(self,"ANCHOR_TOP"); GameTooltip:ClearLines()
+            GameTooltip:AddLine(isDE and "Alle angemeldeten Spieler in die Gruppe/Raid einladen." or "Invite all signed-up players to group/raid.")
+            GameTooltip:Show()
+        end)
+        invBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    end
     eventDetailFrame=f; f:Show()
 end
 
