@@ -317,80 +317,79 @@ local function BuildInfoFrame()
     sep:SetHeight(2); sep:SetColorTexture(0.3,0.5,0.8,0.8)
 
     -- Kontakt-Sektion
-    local contBg=MakeBg(f,0.05,0.05,0.12,0.95,0.2,0.2,0.45)
-    contBg:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,30)
-    contBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,30); contBg:SetHeight(128)
-
+    -- ── Kontakt-Sektion (scrollbar) ─────────────────────────
     local contTitle=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
-    contTitle:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",12,150)
+    contTitle:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",10,158)
     contTitle:SetText(R.."Unserioes? Melde dich bei der Gildenleitung:"..X)
 
-    -- Hilfsfunktion: eine Person-Zeile mit Whisper-Button
-    local personY = 128
-    local function PersonRow(rankLabel, rankColor, name, isOnlineFn)
-        local rowBg=f:CreateTexture(nil,"BACKGROUND"); rowBg:SetHeight(24)
-        rowBg:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",4,personY-24)
-        rowBg:SetPoint("BOTTOMRIGHT",contBg,"BOTTOMRIGHT",-4,personY-24)
-        rowBg:SetColorTexture(0.08,0.08,0.18,0.6)
+    local contBg=MakeBg(f,0.05,0.05,0.12,0.95,0.2,0.2,0.45)
+    contBg:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,34)
+    contBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,34)
+    contBg:SetPoint("TOPLEFT",f.InsetBg,"BOTTOMLEFT",4,156)
 
-        local lbRank=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-        lbRank:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",10,personY-20)
-        lbRank:SetText(rankColor..rankLabel..X); lbRank:SetSize(100,16)
+    -- ScrollFrame fuer die Personenliste
+    local csf=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+    csf:SetPoint("TOPLEFT", contBg,"TOPLEFT",  4,-4)
+    csf:SetPoint("BOTTOMRIGHT",contBg,"BOTTOMRIGHT",-24,4)
+    local csc=CreateFrame("Frame",nil,csf); csc:SetWidth(460); csc:SetHeight(20); csf:SetScrollChild(csc)
 
-        local lbName=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
-        lbName:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",116,personY-20)
-        lbName:SetText(W..name..X); lbName:SetSize(200,16)
+    -- Hilfsfunktion: eine Person-Zeile im ScrollContent
+    local rowY = 0
+    local function PersonRow(rankLabel, rankColor, name)
+        -- Zebra-Hintergrund
+        local rowBg=csc:CreateTexture(nil,"BACKGROUND"); rowBg:SetHeight(26)
+        rowBg:SetPoint("TOPLEFT",csc,"TOPLEFT",0,-rowY)
+        rowBg:SetPoint("TOPRIGHT",csc,"TOPRIGHT",0,-rowY)
+        if (rowY/26)%2==0 then rowBg:SetColorTexture(0.08,0.08,0.18,0.7)
+        else rowBg:SetColorTexture(0.05,0.05,0.12,0.5) end
 
-        local dot=f:CreateTexture(nil,"OVERLAY"); dot:SetSize(12,12)
-        dot:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",320,personY-18)
+        local lbRank=csc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        lbRank:SetPoint("TOPLEFT",csc,"TOPLEFT",6,-rowY-5)
+        lbRank:SetText(rankColor..rankLabel..X); lbRank:SetSize(110,16)
 
-        local whisperBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-        whisperBtn:SetSize(100,20)
-        whisperBtn:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",340,personY-24)
+        local lbName=csc:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        lbName:SetPoint("TOPLEFT",csc,"TOPLEFT",122,-rowY-5)
+        lbName:SetText(W..name..X); lbName:SetSize(180,16)
+
+        local dot=csc:CreateTexture(nil,"OVERLAY"); dot:SetSize(12,12)
+        dot:SetPoint("TOPLEFT",csc,"TOPLEFT",308,-rowY-7)
+        local function UpdateDot()
+            if IsOnline(name) then dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online");  dot:SetVertexColor(1,1,1,1)
+            else                   dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline"); dot:SetVertexColor(1,1,1,0.45) end
+        end
+        UpdateDot(); f:HookScript("OnShow",UpdateDot)
+
+        local whisperBtn=CreateFrame("Button",nil,csc,"UIPanelButtonTemplate")
+        whisperBtn:SetSize(100,20); whisperBtn:SetPoint("TOPLEFT",csc,"TOPLEFT",326,-rowY-3)
         whisperBtn:SetText("Fluestern")
         whisperBtn:SetScript("OnClick",function() OpenWhisper(name) end)
         whisperBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_TOP"); GameTooltip:ClearLines(); GameTooltip:AddLine(T.."/w "..name..X); GameTooltip:Show() end)
         whisperBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
 
-        -- Online-Dot live aktualisieren
-        local function UpdateDot()
-            if IsOnline(name) then
-                dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online"); dot:SetVertexColor(1,1,1,1)
-            else
-                dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline"); dot:SetVertexColor(1,1,1,0.45)
-            end
-        end
-        UpdateDot()
-        f:HookScript("OnShow",UpdateDot)
-
-        personY=personY-26
+        rowY=rowY+26
+        csc:SetHeight(rowY)
     end
 
-    -- Gildenleitung + Offiziere aus dem Roster lesen
+    -- Gildenleitung + Offiziere aus dem Roster
     local function PopulateLeadership()
-        local gm, officers = {}, {}
+        local gm,officers={},{}
         local total=GetNumGuildMembers and GetNumGuildMembers() or 0
         for i=1,total do
-            local name,rankName,rankIdx=GetGuildRosterInfo(i)
+            local name,_,rankIdx=GetGuildRosterInfo(i)
             if name then
-                local shortName=name:match("^([^%-]+)") or name
-                if rankIdx==0 then
-                    gm[#gm+1]={name=shortName,rankName=rankName}
-                elseif rankIdx==1 then
-                    officers[#officers+1]={name=shortName,rankName=rankName}
-                end
+                local sn=name:match("^([^%-]+)") or name
+                if rankIdx==0 then gm[#gm+1]=sn
+                elseif rankIdx==1 then officers[#officers+1]=sn end
             end
         end
-
         if #gm==0 and #officers==0 then
-            local hint=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-            hint:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",10,personY-20)
-            hint:SetText(Dg.."Roster noch nicht geladen — bitte Sync druecken."..X)
-            return
+            local hint=csc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            hint:SetPoint("TOPLEFT",csc,"TOPLEFT",8,-6)
+            hint:SetText(Dg.."Roster noch nicht geladen — bitte Sync / Roster neu laden."..X)
+            csc:SetHeight(26); return
         end
-
-        for _,p in ipairs(gm)      do PersonRow("Gildenmeister", G,  p.name) end
-        for _,p in ipairs(officers) do PersonRow("Offizier",      T,  p.name) end
+        for _,n in ipairs(gm)       do PersonRow("Gildenmeister",G,n) end
+        for _,n in ipairs(officers)  do PersonRow("Offizier",     T,n) end
     end
     PopulateLeadership()
 
