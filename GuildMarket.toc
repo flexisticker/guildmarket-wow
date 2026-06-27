@@ -3,7 +3,8 @@
 ## Notes: Internal guild marketplace for "Der Hohe Rat" — WTB/WTS listings via guild sync
 ## Notes-deDE: Gildeninterner Marktplatz fuer "Der Hohe Rat" — Suche/Biete via Gildensync
 ## Author: MichaModus
-## Version: 0.9.0
+## Version: 0.9.7-beta
+## X-Curse-Project-ID: REPLACE_ME
 ## DefaultState: Enabled
 ## X-GitHub: https://github.com/flexisticker/guildmarket-wow
 ## X-License: MIT

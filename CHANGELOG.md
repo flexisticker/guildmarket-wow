@@ -5,6 +5,52 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [0.9.7-beta] · 2026-06-27 · Ziehdienst, Addon-Nutzer-Zähler, Fenster höher
+
+### Added
+- Neuer Beruf **Ziehdienst** im DIENST-Modus
+- Eigenes Dungeon-Dropdown (35 Dungeons, Classic + TBC) ersetzt Leistungsfeld wenn Ziehdienst gewählt
+- Dungeons werden nach Spieler-Level gefiltert (nur Dungeons für die man hoch genug ist)
+- **„Wunsch-Dungeon"** immer als erste Option (für individuelle Absprachen)
+- **Addon-Nutzer-Zähler** oben rechts im Fenster: zählt wie viele Gildenmitglieder das Addon nutzen (wächst live wenn jemand eine Nachricht sendet)
+
+### Changed
+- MIN_H 640 → 680px — Formular 25px höher, alle Labels klar sichtbar oberhalb ihrer Felder
+- Label im DIENST-Formular wechselt dynamisch: „Leistung / Bezeichnung" ↔ „Dungeon"
+
+---
+
+## [0.9.6] · 2026-06-27 · Fenster höher, Labels sichtbar
+
+### Changed
+- MIN_H 640 → 680px, alle Formular-Y-Koordinaten um 25px nach oben verschoben
+- „Neuer Eintrag"-Überschrift liegt jetzt klar oberhalb des Backdrop-Rahmens
+- ScrollFrame-Bottom und Trennlinie angepasst (y=295/293)
+
+### Added
+- Addon-Nutzer-Zähler (FontString im Tab-Bereich, rechts)
+
+---
+
+## [0.9.5] · 2026-06-27 · Kontaktliste: Online-Dot größer, Offline ausgegraut
+
+### Changed
+- Online-Dot 16×16 (statt 12×12), volle Helligkeit
+- Offline: Name in Grau, Dot 35% Alpha, Flüstern-Button halb-transparent
+- Online-Mitglieder stehen in jeder Rang-Gruppe oben
+
+---
+
+## [0.9.4] · 2026-06-27 · Regeln guild-agnostisch, Kontaktliste sortiert
+
+### Changed
+- Info-Popup: Begrüßung zeigt dynamisch `GetGuildInfo("player")` statt Hardcode „Der Hohe Rat"
+- Regel 2: **Gildenrabatt** — günstiger anbieten als extern
+- Regel 5: **Gilde geht vor** — Mitglieder haben Vorrang
+- Kontaktliste: Online-Mitglieder stehen in jeder Gruppe oben (GM / Offiziere)
+
+---
+
 ## [0.9.3] · 2026-06-27 · MakeBg-Fix, Layout-Overlap, 680px
 
 ### Fixed

@@ -1,4 +1,5 @@
 package-as: GuildMarket
+project-id: REPLACE_ME
 
 ignore:
   - .pkgmeta

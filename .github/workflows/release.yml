@@ -33,3 +33,4 @@ jobs:
         env:
           CF_API_KEY: ${{ secrets.gmarketAddon }}
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+          CURSE_RELEASE_TYPE: beta
