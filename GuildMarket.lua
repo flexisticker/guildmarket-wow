@@ -255,11 +255,11 @@ local RULES = {
     { G.."4.  Kein Betrug"..X,
       "Versuche nie, Gildenmitglieder zu ueberteuern oder zu taeuschen.\nDas Vertrauen in der Gilde ist unser groesstes Gut." },
     { G.."5.  Nur Gildenmitglieder"..X,
-      "Der Gildenmarkt ist ausschliesslich fuer Mitglieder von\n\"Der Hohe Rat\". Weitergabe an Externe ist verboten." },
+      "Der Gildenmarkt ist ausschliesslich fuer Mitglieder deiner Gilde.\nWeitergabe von Informationen an Externe ist nicht gestattet." },
     { G.."6.  Eintraege aktuell halten"..X,
       "Losche deinen Eintrag sobald das Item vergeben oder der\nDienst erledigt ist. Eintraege laufen nach 7 Tagen ab." },
     { G.."7.  Respektvoller Umgang"..X,
-      "Behandle Kaefer und Verkaeufer so, wie du selbst behandelt\nwerden moechtest. Freundlichkeit ist keine Schwaeche." },
+      "Behandle Kaeufer und Verkaeufer so, wie du selbst behandelt\nwerden moechtest. Freundlichkeit ist keine Schwaeche." },
     { G.."8.  Meldepflicht"..X,
       "Unserioses Verhalten bitte umgehend der Gildenleitung\noder einem Offizier melden (Buttons unten)." },
 }
@@ -290,7 +290,8 @@ local function BuildInfoFrame()
     -- Einleitung
     local intro=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
     intro:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-4); intro:SetWidth(462); intro:SetJustifyH("LEFT")
-    intro:SetText(T.."Herzlich willkommen im Gildenmarkt von \"Der Hohe Rat\"!"..X.."\n\n"
+    local gn=GetGuildInfo("player") or "deiner Gilde"
+    intro:SetText(T.."Herzlich willkommen im Gildenmarkt von \""..gn.."\"!"..X.."\n\n"
         ..W.."Bitte halte dich an folgende Regeln, damit alle Mitglieder\n"
         .."fair und angenehm miteinander handeln koennen:"..X)
 
