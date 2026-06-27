@@ -228,6 +228,177 @@ local function GetDraggedItem()
 end
 
 -- ============================================================
+-- Info / Regeln-Frame
+-- ============================================================
+local infoFrame
+
+local RULES = {
+    { G.."1.  Nur echte Angebote"..X,
+      "Poste nur Items, Dienste oder Gesuche, die du tatsaechlich anbieten\noder kaufen moechtest. Keine Phantomeintraege oder Spam." },
+    { G.."2.  Faire Preise"..X,
+      "Orientiere dich an den Auktionshaus-Preisen. Wucherpreise\nsind verboten und werden auf Meldung geloescht." },
+    { G.."3.  Ehrlichkeit bei Qualitaet"..X,
+      "Beschreibe Items und Leistungen korrekt. Falsche Angaben\n(z.B. falsche Verzauberung, falscher Zustand) sind ein Verstoss." },
+    { G.."4.  Kein Betrug"..X,
+      "Versuche nie, Gildenmitglieder zu ueberteuern oder zu taeuschen.\nDas Vertrauen in der Gilde ist unser groesstes Gut." },
+    { G.."5.  Nur Gildenmitglieder"..X,
+      "Der Gildenmarkt ist ausschliesslich fuer Mitglieder von\n\"Der Hohe Rat\". Weitergabe an Externe ist verboten." },
+    { G.."6.  Eintraege aktuell halten"..X,
+      "Losche deinen Eintrag sobald das Item vergeben oder der\nDienst erledigt ist. Eintraege laufen nach 7 Tagen ab." },
+    { G.."7.  Respektvoller Umgang"..X,
+      "Behandle Kaefer und Verkaeufer so, wie du selbst behandelt\nwerden moechtest. Freundlichkeit ist keine Schwaeche." },
+    { G.."8.  Meldepflicht"..X,
+      "Unserioses Verhalten bitte umgehend der Gildenleitung\noder einem Offizier melden (Buttons unten)." },
+}
+
+local function BuildInfoFrame()
+    if infoFrame then
+        infoFrame:Show(); return
+    end
+
+    local f=CreateFrame("Frame","GuildMarketInfoFrame",UIParent,"BasicFrameTemplateWithInset")
+    f:SetSize(520,540); f:SetPoint("CENTER",UIParent,"CENTER",0,0)
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
+    f:SetFrameStrata("DIALOG"); f:SetFrameLevel(25)
+
+    f.TitleBg:SetHeight(28)
+    local title=f:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+    title:SetPoint("CENTER",f.TitleBg,"CENTER",0,2)
+    title:SetText(G.."Gildenmarkt — Regeln & Kontakt"..X)
+
+    -- ScrollFrame fuer Regeltext
+    local sf=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+    sf:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,-6)
+    sf:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,160)
+
+    local sc=CreateFrame("Frame",nil,sf); sc:SetWidth(470); sc:SetHeight(10); sf:SetScrollChild(sc)
+
+    -- Einleitung
+    local intro=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    intro:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-4); intro:SetWidth(462); intro:SetJustifyH("LEFT")
+    intro:SetText(T.."Herzlich willkommen im Gildenmarkt von \"Der Hohe Rat\"!"..X.."\n\n"
+        ..W.."Bitte halte dich an folgende Regeln, damit alle Mitglieder\n"
+        .."fair und angenehm miteinander handeln koennen:"..X)
+
+    local yOff=-60
+    for _,rule in ipairs(RULES) do
+        local hdr=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        hdr:SetPoint("TOPLEFT",sc,"TOPLEFT",4,yOff); hdr:SetWidth(462); hdr:SetJustifyH("LEFT")
+        hdr:SetText(rule[1]); yOff=yOff-18
+
+        local body=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        body:SetPoint("TOPLEFT",sc,"TOPLEFT",14,yOff); body:SetWidth(448); body:SetJustifyH("LEFT")
+        body:SetText(Dg..rule[2]..X); yOff=yOff-28
+        local bodyH=select(2,body:GetFont()) -- approx line height
+        -- Dynamische Hoehe schaetzen: 2 Zeilen = 28, sonst mehr
+        local lines=select(2,(rule[2]):gsub("\n","")) + 1
+        yOff=yOff-(lines>2 and 8 or 0)
+    end
+    sc:SetHeight(math.abs(yOff)+20)
+
+    -- Trennlinie
+    local sep=f:CreateTexture(nil,"BACKGROUND")
+    sep:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,158)
+    sep:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,158)
+    sep:SetHeight(2); sep:SetColorTexture(0.3,0.5,0.8,0.8)
+
+    -- Kontakt-Sektion
+    local contBg=MakeBg(f,0.05,0.05,0.12,0.95,0.2,0.2,0.45)
+    contBg:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,30)
+    contBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,30); contBg:SetHeight(128)
+
+    local contTitle=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    contTitle:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",12,150)
+    contTitle:SetText(R.."Unserioes? Melde dich bei der Gildenleitung:"..X)
+
+    -- Hilfsfunktion: eine Person-Zeile mit Whisper-Button
+    local personY = 128
+    local function PersonRow(rankLabel, rankColor, name, isOnlineFn)
+        local rowBg=f:CreateTexture(nil,"BACKGROUND"); rowBg:SetHeight(24)
+        rowBg:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",4,personY-24)
+        rowBg:SetPoint("BOTTOMRIGHT",contBg,"BOTTOMRIGHT",-4,personY-24)
+        rowBg:SetColorTexture(0.08,0.08,0.18,0.6)
+
+        local lbRank=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        lbRank:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",10,personY-20)
+        lbRank:SetText(rankColor..rankLabel..X); lbRank:SetSize(100,16)
+
+        local lbName=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        lbName:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",116,personY-20)
+        lbName:SetText(W..name..X); lbName:SetSize(200,16)
+
+        local dot=f:CreateTexture(nil,"OVERLAY"); dot:SetSize(12,12)
+        dot:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",320,personY-18)
+
+        local whisperBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+        whisperBtn:SetSize(100,20)
+        whisperBtn:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",340,personY-24)
+        whisperBtn:SetText("Fluestern")
+        whisperBtn:SetScript("OnClick",function() OpenWhisper(name) end)
+        whisperBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_TOP"); GameTooltip:ClearLines(); GameTooltip:AddLine(T.."/w "..name..X); GameTooltip:Show() end)
+        whisperBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+
+        -- Online-Dot live aktualisieren
+        local function UpdateDot()
+            if IsOnline(name) then
+                dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online"); dot:SetVertexColor(1,1,1,1)
+            else
+                dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline"); dot:SetVertexColor(1,1,1,0.45)
+            end
+        end
+        UpdateDot()
+        f:HookScript("OnShow",UpdateDot)
+
+        personY=personY-26
+    end
+
+    -- Gildenleitung + Offiziere aus dem Roster lesen
+    local function PopulateLeadership()
+        local gm, officers = {}, {}
+        local total=GetNumGuildMembers and GetNumGuildMembers() or 0
+        for i=1,total do
+            local name,rankName,rankIdx=GetGuildRosterInfo(i)
+            if name then
+                local shortName=name:match("^([^%-]+)") or name
+                if rankIdx==0 then
+                    gm[#gm+1]={name=shortName,rankName=rankName}
+                elseif rankIdx==1 then
+                    officers[#officers+1]={name=shortName,rankName=rankName}
+                end
+            end
+        end
+
+        if #gm==0 and #officers==0 then
+            local hint=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            hint:SetPoint("BOTTOMLEFT",contBg,"BOTTOMLEFT",10,personY-20)
+            hint:SetText(Dg.."Roster noch nicht geladen — bitte Sync druecken."..X)
+            return
+        end
+
+        for _,p in ipairs(gm)      do PersonRow("Gildenmeister", G,  p.name) end
+        for _,p in ipairs(officers) do PersonRow("Offizier",      T,  p.name) end
+    end
+    PopulateLeadership()
+
+    -- Schliessen-Button
+    local closeBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+    closeBtn:SetSize(120,22); closeBtn:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-8,6)
+    closeBtn:SetText("Schliessen"); closeBtn:SetScript("OnClick",function() f:Hide() end)
+
+    local reloadBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+    reloadBtn:SetSize(140,22); reloadBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,6)
+    reloadBtn:SetText("Roster neu laden")
+    reloadBtn:SetScript("OnClick",function()
+        if GuildRoster then GuildRoster() end
+        UpdateRoster()
+        f:Hide(); infoFrame=nil; BuildInfoFrame()
+    end)
+
+    infoFrame=f
+end
+
+-- ============================================================
 -- Config-Frame
 -- ============================================================
 local function BuildConfigFrame()
@@ -491,6 +662,13 @@ local function BuildUI()
     local cfgBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     cfgBtn:SetSize(30,20); cfgBtn:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-4)
     cfgBtn:SetText("cfg"); cfgBtn:SetScript("OnClick",BuildConfigFrame)
+
+    local infoBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+    infoBtn:SetSize(22,20); infoBtn:SetPoint("RIGHT",cfgBtn,"LEFT",-4,0)
+    infoBtn:SetText("?")
+    infoBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_BOTTOM"); GameTooltip:ClearLines(); GameTooltip:AddLine(G.."Marktplatz-Regeln & Kontakt"..X); GameTooltip:Show() end)
+    infoBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    infoBtn:SetScript("OnClick",BuildInfoFrame)
 
     local grip=CreateFrame("Button",nil,f); grip:SetSize(16,16); grip:SetPoint("BOTTOMRIGHT",f,"BOTTOMRIGHT",-2,2)
     grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
