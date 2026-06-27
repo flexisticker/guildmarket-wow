@@ -803,7 +803,7 @@ local function BuildUI()
     -- ══ ScrollFrame ══
     local sf=CreateFrame("ScrollFrame","GuildMarketScroll",f,"UIPanelScrollFrameTemplate")
     sf:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-98)
-    sf:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-22,295)
+    sf:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-22,288)
     local content=CreateFrame("Frame",nil,sf)
     content:SetWidth(ROW_W); content:SetHeight(20); sf:SetScrollChild(content)
     listContent=content
@@ -811,7 +811,7 @@ local function BuildUI()
 
     -- Trennlinie Formular
     local div=f:CreateTexture(nil,"BACKGROUND")
-    div:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,293); div:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,293)
+    div:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,286); div:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,286)
     div:SetHeight(2); div:SetColorTexture(0.3,0.5,0.8,0.8)
 
     -- ══════════════════════════════════════════
@@ -856,8 +856,8 @@ local function BuildUI()
     local notizBg=MakeBg(f,0.04,0.04,0.10,0.92,0.15,0.15,0.35)
     notizBg:SetPoint("BOTTOMLEFT", f.InsetBg,"BOTTOMLEFT",4, 101)
     notizBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,101); notizBg:SetHeight(40)
-    local lbNote=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbNote:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",10,129); lbNote:SetText(Dg.."Notiz (optional):"..X)
+    local lbNote=notizBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbNote:SetPoint("TOPLEFT",notizBg,"TOPLEFT",6,-6); lbNote:SetText(Dg.."Notiz (optional):"..X)
     local ebNote=CreateFrame("EditBox","GuildMarketNoteBox",f,"InputBoxTemplate")
     ebNote:SetPoint("BOTTOMLEFT", f.InsetBg,"BOTTOMLEFT",116, 105)
     ebNote:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT", -10, 105)
@@ -868,13 +868,13 @@ local function BuildUI()
     preisBg:SetPoint("BOTTOMLEFT", f.InsetBg,"BOTTOMLEFT",4,141)
     preisBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,141); preisBg:SetHeight(50)
 
-    local lbPreis=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
-    lbPreis:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",10,169); lbPreis:SetText(G.."Preis:"..X)
+    local lbPreis=preisBg:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    lbPreis:SetPoint("TOPLEFT",preisBg,"TOPLEFT",6,-6); lbPreis:SetText(G.."Preis:"..X)
 
-    -- Coin-Felder: Label y=169, Box y=145
+    -- Coin-Felder: Label oben, Box unten (TOPLEFT von preisBg)
     local function CoinF(lbl,color,bx)
-        local l=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-        l:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",bx,169); l:SetText(color..lbl..X)
+        local l=preisBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        l:SetPoint("TOPLEFT",preisBg,"TOPLEFT",bx-4,-6); l:SetText(color..lbl..X)
         local eb=CreateFrame("EditBox","GuildMarketEB_"..lbl,f,"InputBoxTemplate")
         eb:SetSize(72,22); eb:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",bx,145)
         eb:SetAutoFocus(false); eb:SetMaxLetters(6); eb:SetNumeric(true)
@@ -891,8 +891,8 @@ local function BuildUI()
     end)
 
     -- FP/VHB: Label y=144, Button y=120
-    local lbPType=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbPType:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",448,169); lbPType:SetText(Dg.."Art:"..X)
+    local lbPType=preisBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbPType:SetPoint("TOPLEFT",preisBg,"TOPLEFT",444,-6); lbPType:SetText(Dg.."Art:"..X)
     local ddPType=CreateFrame("Frame","GuildMarketDDPType",f,"UIDropDownMenuTemplate")
     ddPType:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",434,146); UIDropDownMenu_SetWidth(ddPType,110)
     UIDropDownMenu_Initialize(ddPType,function(_,level)
@@ -908,77 +908,63 @@ local function BuildUI()
     -- ── Eintrag-Sektion ──────────────────────── bg y=166..266
     local itemBg=MakeBg(f,0.05,0.05,0.14,0.95,0.18,0.28,0.50)
     itemBg:SetPoint("BOTTOMLEFT", f.InsetBg,"BOTTOMLEFT",4,191)
-    itemBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,191); itemBg:SetHeight(102)
+    itemBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,191); itemBg:SetHeight(95)
 
-    local newLbl=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
-    newLbl:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",10,268); newLbl:SetText(G.."Neuer Eintrag"..X)
+    -- Kinder von itemBg → rendern ÜBER dem Backdrop-Rahmen (OVERLAY > BORDER)
+    local newLbl=itemBg:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    newLbl:SetPoint("TOPLEFT",itemBg,"TOPLEFT",8,-8); newLbl:SetText(G.."Neuer Eintrag"..X)
 
-    -- ── Typ-Dropdown + Felder ─────────────────────────────────
-    --
-    --  UIDropDownMenu mit SetWidth(74): sichtbarer Button = 74+26 = 100px
-    --  Frame-Offset -14px links vom sichtbaren Button-Anfang.
-    --  Button-Anfang bei x=10 (frame x=-4), Button-Ende bei x=110.
-    --  Labels + Felder starten bei x=120 → kein Ueberlapp.
-    --
-    --  Layout (alle y von InsetBg BOTTOMLEFT):
-    --    y=224  "Typ:" / "Item ...:" / "Menge:" labels
-    --    y=200  [BIETE DD]  [item editbox 390px]  [menge 88px]
-    --    y=200  [BIETE DD]  [Beruf DD 140px]  [Leistung 256px]   (DIENST Zeile 1)
-    --    y=172  [Mats editbox 516px]                              (DIENST Zeile 2)
-
-    local lbTyp=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbTyp:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",10,249); lbTyp:SetText(Dg.."Typ:"..X)
+    local lbTyp=itemBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbTyp:SetPoint("TOPLEFT",itemBg,"TOPLEFT",8,-26); lbTyp:SetText(Dg.."Typ:"..X)
 
     local ddType=CreateFrame("Frame","GuildMarketDDType",f,"UIDropDownMenuTemplate")
-    ddType:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",-4,224)
+    ddType:SetPoint("TOPLEFT",itemBg,"TOPLEFT",-4,-40)
     UIDropDownMenu_SetWidth(ddType,74)   -- sichtbarer Button = 100px, endet bei x≈110
 
     -- ── BIETE/SUCHE-Sektion (y=168, h=62) ──────────────────
     local sN=CreateFrame("Frame",nil,f)
-    sN:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",0,193); sN:SetSize(660,62); secNormal=sN
+    sN:SetPoint("TOPLEFT",itemBg,"TOPLEFT",0,-43); sN:SetSize(660,50); secNormal=sN
 
     local lbI=sN:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     -- x=120: klar rechts vom Dropdown-Ende (110), mit 10px Luft
-    lbI:SetPoint("BOTTOMLEFT",sN,"BOTTOMLEFT",120,44); lbI:SetText(Dg.."Item  (Drag aus Bag oder Shift+Klick):"..X)
+    lbI:SetPoint("TOPLEFT",sN,"TOPLEFT",120,-2); lbI:SetText(Dg.."Item  (Drag aus Bag oder Shift+Klick):"..X)
 
     ebItem=CreateFrame("EditBox","GuildMarketItemBox",sN,"InputBoxTemplate")
-    -- 120 links + 88 menge + 12 abstand + 10 rand rechts = 110 belegt → 660-110-120=430
-    ebItem:SetSize(418,22); ebItem:SetPoint("BOTTOMLEFT",sN,"BOTTOMLEFT",120,20)
+    ebItem:SetSize(418,22); ebItem:SetPoint("TOPLEFT",sN,"TOPLEFT",120,-16)
     ebItem:SetAutoFocus(false); ebItem:SetMaxLetters(40); ebItem.itemLink=nil
     ebItem:SetScript("OnReceiveDrag",function(self) local n,l=GetDraggedItem(); if n then self:SetText(n); self.itemLink=l; ClearCursor() end end)
     ebItem:SetScript("OnMouseDown",  function(self) local n,l=GetDraggedItem(); if n then self:SetText(n); self.itemLink=l; ClearCursor() end end)
     ebItem:SetScript("OnTextChanged",function(self) if self.itemLink then local nm=self.itemLink:match("|h%[(.-)%]|h"); if nm~=self:GetText() then self.itemLink=nil end end end)
 
     local lbMg=sN:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbMg:SetPoint("BOTTOMLEFT",sN,"BOTTOMLEFT",550,44); lbMg:SetText(Dg.."Menge:"..X)
+    lbMg:SetPoint("TOPLEFT",sN,"TOPLEFT",550,-2); lbMg:SetText(Dg.."Menge:"..X)
     local ebAmt=CreateFrame("EditBox","GuildMarketAmtBox",sN,"InputBoxTemplate")
-    ebAmt:SetSize(88,22); ebAmt:SetPoint("BOTTOMLEFT",sN,"BOTTOMLEFT",550,20)
+    ebAmt:SetSize(88,22); ebAmt:SetPoint("TOPLEFT",sN,"TOPLEFT",550,-16)
     ebAmt:SetAutoFocus(false); ebAmt:SetMaxLetters(6); ebAmt:SetNumeric(true)
 
     -- ── DIENST-Sektion (y=200 Zeile1, y=168 Zeile2) ─────────
     local sD=CreateFrame("Frame",nil,f)
-    sD:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",0,225); sD:SetSize(660,62); sD:Hide(); secDienst=sD
+    sD:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",0,245); sD:SetSize(660,62); sD:Hide(); secDienst=sD
 
     -- Zeile 1 Beruf + Leistung
     local lbB=sD:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbB:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",120,44); lbB:SetText(Dg.."Beruf:"..X)
+    lbB:SetPoint("TOPLEFT",sD,"TOPLEFT",120,-2); lbB:SetText(Dg.."Beruf:"..X)
 
     local ddBeruf=CreateFrame("Frame","GuildMarketDDBeruf",sD,"UIDropDownMenuTemplate")
-    -- button bei sD x=120 → frame x=120-14=106
-    ddBeruf:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",106,19)
+    ddBeruf:SetPoint("TOPLEFT",sD,"TOPLEFT",106,-14)
     UIDropDownMenu_SetWidth(ddBeruf,130)  -- button ≈ 156px → endet bei x=276
     local lbL=sD:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbL:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",286,44); lbL:SetText(Dg.."Leistung / Bezeichnung:"..X)
+    lbL:SetPoint("TOPLEFT",sD,"TOPLEFT",286,-2); lbL:SetText(Dg.."Leistung / Bezeichnung:"..X)
 
     local ebLeist=CreateFrame("EditBox","GuildMarketLeistBox",sD,"InputBoxTemplate")
-    ebLeist:SetSize(352,22); ebLeist:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",286,20)
+    ebLeist:SetSize(352,22); ebLeist:SetPoint("TOPLEFT",sD,"TOPLEFT",286,-16)
     ebLeist:SetAutoFocus(false); ebLeist:SetMaxLetters(40); ebLeist.itemLink=nil
     ebLeist:SetScript("OnReceiveDrag",function(self) local n,l=GetDraggedItem(); if n then self:SetText(n); self.itemLink=l; ClearCursor() end end)
     ebLeist:SetScript("OnMouseDown",  function(self) local n,l=GetDraggedItem(); if n then self:SetText(n); self.itemLink=l; ClearCursor() end end)
 
     -- Dungeon-Dropdown (nur bei Ziehdienst sichtbar)
     local ddDungeon=CreateFrame("Frame","GuildMarketDDDungeon",sD,"UIDropDownMenuTemplate")
-    ddDungeon:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",272,17)
+    ddDungeon:SetPoint("TOPLEFT",sD,"TOPLEFT",272,-14)
     UIDropDownMenu_SetWidth(ddDungeon,326)  -- button ≈ 352px, passt auf ebLeist-Breite
     ddDungeon:Hide()
 
@@ -1020,21 +1006,33 @@ local function BuildUI()
 
     -- Zeile 2 Mats (eigener Frame bei y=168)
     local sMats=CreateFrame("Frame",nil,f)
-    sMats:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",0,193); sMats:SetSize(660,30); sMats:Hide()
+    sMats:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",0,213); sMats:SetSize(660,44); sMats:Hide()
     local lbM=sMats:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbM:SetPoint("BOTTOMLEFT",sMats,"BOTTOMLEFT",120,10); lbM:SetText(Dg.."Benoetigte Mats (kommagetrennt):"..X)
+    lbM:SetPoint("TOPLEFT",sMats,"TOPLEFT",120,-4); lbM:SetText(Dg.."Benoetigte Mats (kommagetrennt):"..X)
     local ebMats=CreateFrame("EditBox","GuildMarketMatsBox",sMats,"InputBoxTemplate")
-    ebMats:SetSize(516,22); ebMats:SetPoint("BOTTOMLEFT",sMats,"BOTTOMLEFT",120,-12)
+    ebMats:SetSize(516,22); ebMats:SetPoint("BOTTOMLEFT",sMats,"BOTTOMLEFT",120,4)
     ebMats:SetAutoFocus(false); ebMats:SetMaxLetters(80)
 
-    -- ShowSection
+    -- ShowSection: resized itemBg + ScrollFrame dynamisch
     local function ShowSection(typ)
         if typ=="DIENST" then
             sN:Hide(); sD:Show(); sMats:Show()
-            ddType:ClearAllPoints(); ddType:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",-4,244)
+            itemBg:SetHeight(120)
+            sf:ClearAllPoints()
+            sf:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-98)
+            sf:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-22,313)
+            div:ClearAllPoints()
+            div:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,311)
+            div:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,311)
         else
             sN:Show(); sD:Hide(); sMats:Hide()
-            ddType:ClearAllPoints(); ddType:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",-4,224)
+            itemBg:SetHeight(95)
+            sf:ClearAllPoints()
+            sf:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-98)
+            sf:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-22,288)
+            div:ClearAllPoints()
+            div:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,286)
+            div:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,286)
         end
     end
 
@@ -1046,6 +1044,7 @@ local function BuildUI()
         end
     end)
     UIDropDownMenu_SetSelectedValue(ddType,"BIETE"); UIDropDownMenu_SetText(ddType,"BIETE")
+    ShowSection(postType)  -- initiale Anpassung (setzt itemBg-Höhe + sf/div)
 
     -- ── Post-Button ──────────────────────────────────────────
     postBtn:SetScript("OnClick",function()
