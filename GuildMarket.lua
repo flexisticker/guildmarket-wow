@@ -1,10 +1,104 @@
--- GuildMarket v0.9.0
--- Gildeninterner Marktplatz — modernes Layout, Icons, Suche, 25% breiter
--- Erstellt von MichaModus
+-- GuildMarket v0.9.8
+-- Guild-internal Marketplace — TBC Classic Anniversary (20505) + Classic Era (11508)
+-- Created by MichaModus
 
 local MSG_PREFIX  = "GUILDMKT"
 local EXPIRE_SECS = 7 * 24 * 3600
 local MIN_W, MIN_H = 680, 680
+
+-- ============================================================
+-- Lokalisierung / Localization
+-- ============================================================
+local isDE = GetLocale() == "deDE"
+local L = {
+    -- Tabs
+    TAB_ALL   = isDE and "Alle"   or "All",
+    TAB_WTB   = isDE and "Suche"  or "WTB",
+    TAB_WTS   = isDE and "Biete"  or "WTS",
+    TAB_SVC   = isDE and "Dienst" or "Service",
+    -- Typ-Labels (Protokoll-Codes bleiben BIETE/SUCHE/DIENST)
+    TYPE_BIETE = isDE and "BIETE"   or "OFFER",
+    TYPE_SUCHE = isDE and "SUCHE"   or "SEARCH",
+    TYPE_DIENST= isDE and "DIENST"  or "SERVICE",
+    -- Formular
+    NEW_LISTING = isDE and "Neuer Eintrag"   or "New Listing",
+    LBL_TYPE   = isDE and "Typ:"            or "Type:",
+    LBL_ITEM   = isDE and "Item  (Drag aus Bag oder Shift+Klick):"
+                       or "Item  (Drag from Bag or Shift+Click):",
+    LBL_AMOUNT = isDE and "Menge:"          or "Qty:",
+    LBL_NOTE   = isDE and "Notiz (optional):" or "Note (optional):",
+    LBL_PRICE  = isDE and "Preis:"          or "Price:",
+    LBL_GOLD   = isDE and "Gold"   or "Gold",
+    LBL_SILVER = isDE and "Silber" or "Silver",
+    LBL_COPPER = isDE and "Kupfer" or "Copper",
+    LBL_PTYPE  = isDE and "Art:"   or "Mode:",
+    LBL_PROF   = isDE and "Beruf:"           or "Profession:",
+    LBL_SERVICE= isDE and "Leistung / Bezeichnung:" or "Service / Description:",
+    LBL_DUNGEON= isDE and "Dungeon:"         or "Dungeon:",
+    LBL_MATS   = isDE and "Benoetigte Mats (kommagetrennt):"
+                       or "Required Mats (comma-separated):",
+    -- Buttons
+    BTN_POST   = isDE and "Eintrag posten"           or "Post Listing",
+    BTN_CLEAR  = isDE and "Meine Eintraege loeschen" or "Delete My Listings",
+    BTN_SYNC   = isDE and "Sync" or "Sync",
+    BTN_FREE_N = isDE and "Free: Nein" or "Free: No",
+    BTN_FREE_Y = isDE and "Free: JA"   or "Free: YES",
+    -- Preistypen
+    PT_FIXED   = isDE and "Festpreis" or "Fixed",
+    PT_NEG     = "VHB",
+    PT_FIXED_L = isDE and "Festpreis"          or "Fixed Price",
+    PT_NEG_L   = isDE and "Verhandlungsbasis"  or "Negotiable",
+    -- Spalten-Header
+    HDR_TYPE   = isDE and "Typ"    or "Type",
+    HDR_ITEM   = isDE and "Item / Leistung" or "Item / Service",
+    HDR_AMOUNT = isDE and "Mng"    or "Qty",
+    HDR_PRICE  = isDE and "Preis"  or "Price",
+    HDR_CONTACT= isDE and "Kontakt" or "Contact",
+    HDR_ONLINE = "On",
+    HDR_EXPIRY = isDE and "Rest"   or "Left",
+    -- Meldungen
+    MSG_LOADED  = isDE and "Geladen" or "Loaded",
+    MSG_SYNC    = isDE and "Sync..." or "Sync...",
+    MSG_POSTED  = isDE and "Gepostet:" or "Posted:",
+    MSG_DELETED = isDE and "Eintraege geloescht." or "listings deleted.",
+    MSG_SETTINGS= isDE and "Einstellungen aktualisiert." or "Settings updated.",
+    MSG_NO_ACCESS=isDE and "Kein Zugriff." or "No access.",
+    MSG_NO_ITEM = isDE and "Bitte Item eingeben."     or "Please enter an item.",
+    MSG_NO_SVC  = isDE and "Bitte Leistung eingeben." or "Please enter a service.",
+    MSG_NO_DGN  = isDE and "Bitte Dungeon auswaehlen." or "Please select a dungeon.",
+    -- Tooltips
+    TT_SEARCH  = isDE and "Suche:"    or "Search:",
+    TT_CONTACT = isDE and "Kontakt: " or "Contact: ",
+    TT_EXPIRES = isDE and "Laeuft ab: " or "Expires: ",
+    TT_AMOUNT  = isDE and "Menge: "   or "Amount: ",
+    TT_NEEDED  = isDE and "Benoetigt:" or "Required:",
+    TT_FROM    = isDE and "Von: "     or "From: ",
+    TT_DELETE  = isDE and "Eintrag loeschen" or "Delete listing",
+    TT_NORIGHT = isDE and "Kein Zugriff"     or "No access",
+    TT_NEED_RNK= isDE and "Benoetigt: " or "Requires: ",
+    TT_RULES   = isDE and "Marktplatz-Regeln & Kontakt" or "Market Rules & Contact",
+    -- Info-Popup
+    INFO_ROSTER = isDE and "Roster neu laden" or "Reload Roster",
+    INFO_WHISPER= isDE and "Fluestern" or "Whisper",
+    INFO_GM     = isDE and "Gildenmeister" or "Guild Master",
+    INFO_OFFICER= isDE and "Offizier" or "Officer",
+    INFO_INTRO1 = isDE and "Herzlich willkommen im Gildenmarkt von"
+                       or  "Welcome to the Guild Market of",
+    INFO_INTRO2 = isDE and "Bitte halte dich an folgende Regeln, damit alle Mitglieder\nfair und angenehm miteinander handeln koennen:"
+                       or  "Please follow these rules so all members\ncan trade fairly and respectfully:",
+    -- Config
+    CFG_POSTRANK= isDE and "Postier-Rang:"   or "Post Rank:",
+    CFG_DELRANK = isDE and "Loeschrecht ab:" or "Delete Access:",
+    CFG_SAVE    = isDE and "Speichern" or "Save",
+    -- Footer
+    FOOTER1 = isDE and "7 Tage Laufzeit  •  Online-Icon anklicken zum Fluestern"
+                    or  "7-day listings  •  Click online icon to whisper",
+    -- Sonstiges
+    COUNT_USERS  = isDE and "Addon-Nutzer" or "Addon Users",
+    EMPTY_SEARCH = isDE and 'Keine Eintraege fuer "' or 'No listings for "',
+    EMPTY_LIST   = isDE and "Keine Eintraege.\nSync anfordern oder neuen Eintrag posten."
+                        or  "No listings.\nRequest sync or post a new listing.",
+}
 
 -- Spalten (icon + verschiebt sich rechts von item beim Resize)
 local COL = {
@@ -20,18 +114,21 @@ local COL = {
 local ROW_H = 22
 local ROW_W = 548
 
--- Berufe
-local BERUFE = {
+-- Berufe / Professions
+local BERUFE = isDE and {
     "Alchemie","Angeln","Bergbau","Erste Hilfe","Farmservice",
     "Ingenieurskunst","Juwelenschleifen","Kochkunst",
     "Kraeuterkunde","Kuerschnerei","Lederverarbeitung",
     "Schneiderei","Schmiedekunst","Verzauberkunst","Ziehdienst",
+} or {
+    "Alchemy","Blacksmithing","Carry Service","Cooking","Enchanting",
+    "Engineering","Farm Service","First Aid","Fishing",
+    "Herbalism","Jewelcrafting","Leatherworking","Mining","Skinning","Tailoring",
 }
 
--- { name, minCarryLevel } — Spieler muss >= dieses Level sein um den Dungeon sinnvoll zu ziehen
-local DUNGEONS = {
-    -- Classic
-    { "Wunsch-Dungeon",          1  },  -- immer als erste Option
+-- { name, minCarryLevel }
+local DUNGEONS = isDE and {
+    { "Wunsch-Dungeon",          1  },
     { "Totenwacht (RFC)",        20 },
     { "Tiefklingen-Wacht",       22 },
     { "Totenminen",              22 },
@@ -54,7 +151,6 @@ local DUNGEONS = {
     { "Duesterbuch",             58 },
     { "Scholomanz",              58 },
     { "Stratholme",              58 },
-    -- TBC
     { "Hoellenfeuerfestung",     62 },
     { "Blutkessel",              62 },
     { "Sklavenpferche",          62 },
@@ -70,24 +166,79 @@ local DUNGEONS = {
     { "Altes Hillsbrad",         66 },
     { "Der schwarze Morast",     68 },
     { "Magisterterasse",         68 },
+} or {
+    { "Custom Dungeon",          1  },
+    { "Ragefire Chasm",          20 },
+    { "Wailing Caverns",         22 },
+    { "The Deadmines",           22 },
+    { "Shadowfang Keep",         26 },
+    { "The Stockade",            26 },
+    { "Gnomeregan",              30 },
+    { "SM: Library",             36 },
+    { "SM: Graveyard",           38 },
+    { "SM: Armory",              40 },
+    { "SM: Cathedral",           42 },
+    { "Razorfen Kraul",          38 },
+    { "Razorfen Downs",          44 },
+    { "Uldaman",                 46 },
+    { "Zul'Farrak",              50 },
+    { "Maraudon",                52 },
+    { "Sunken Temple",           55 },
+    { "Blackrock Depths",        58 },
+    { "Lower Blackrock Spire",   58 },
+    { "Upper Blackrock Spire",   58 },
+    { "Dire Maul",               58 },
+    { "Scholomance",             58 },
+    { "Stratholme",              58 },
+    { "Hellfire Ramparts",       62 },
+    { "The Blood Furnace",       62 },
+    { "The Slave Pens",          62 },
+    { "The Underbog",            63 },
+    { "Mana-Tombs",              64 },
+    { "Auchenai Crypts",         64 },
+    { "Sethekk Halls",           65 },
+    { "Shadow Labyrinth",        68 },
+    { "The Shattered Halls",     68 },
+    { "The Steam Vaults",        68 },
+    { "The Botanica",            68 },
+    { "The Arcatraz",            68 },
+    { "Old Hillsbrad Foothills", 66 },
+    { "The Black Morass",        68 },
+    { "Magisters' Terrace",      68 },
 }
 
--- Berufs-Icons (Spell-Texture Pfade, TBC Classic)
+-- Berufs-Icons (Spell-Texture Pfade, TBC Classic) — DE + EN keys
 local BERUF_ICONS = {
-    ["Alchemie"]        = "Interface\\Icons\\Trade_Alchemy",
-    ["Angeln"]          = "Interface\\Icons\\Trade_Fishing",
-    ["Bergbau"]         = "Interface\\Icons\\Trade_Mining",
-    ["Erste Hilfe"]     = "Interface\\Icons\\Spell_Holy_SealOfSacrifice",
-    ["Farmservice"]     = "Interface\\Icons\\INV_Misc_Food_15",
-    ["Ingenieurskunst"] = "Interface\\Icons\\Trade_Engineering",
-    ["Juwelenschleifen"]= "Interface\\Icons\\INV_Misc_Gem_01",
-    ["Kochkunst"]       = "Interface\\Icons\\INV_Misc_Food_15",
-    ["Kraeuterkunde"]   = "Interface\\Icons\\Trade_Herbalism",
-    ["Kuerscbnerei"]    = "Interface\\Icons\\INV_Misc_Pelt_Wolf_01",
-    ["Lederverarbeitung"]="Interface\\Icons\\Trade_LeatherWorking",
-    ["Schneiderei"]     = "Interface\\Icons\\Trade_Tailoring",
-    ["Schmiedekunst"]   = "Interface\\Icons\\Trade_BlackSmithing",
-    ["Verzauberkunst"]  = "Interface\\Icons\\Trade_Engraving",
+    ["Alchemie"]         = "Interface\\Icons\\Trade_Alchemy",
+    ["Alchemy"]          = "Interface\\Icons\\Trade_Alchemy",
+    ["Angeln"]           = "Interface\\Icons\\Trade_Fishing",
+    ["Fishing"]          = "Interface\\Icons\\Trade_Fishing",
+    ["Bergbau"]          = "Interface\\Icons\\Trade_Mining",
+    ["Mining"]           = "Interface\\Icons\\Trade_Mining",
+    ["Erste Hilfe"]      = "Interface\\Icons\\Spell_Holy_SealOfSacrifice",
+    ["First Aid"]        = "Interface\\Icons\\Spell_Holy_SealOfSacrifice",
+    ["Farmservice"]      = "Interface\\Icons\\INV_Misc_Food_15",
+    ["Farm Service"]     = "Interface\\Icons\\INV_Misc_Food_15",
+    ["Ingenieurskunst"]  = "Interface\\Icons\\Trade_Engineering",
+    ["Engineering"]      = "Interface\\Icons\\Trade_Engineering",
+    ["Juwelenschleifen"] = "Interface\\Icons\\INV_Misc_Gem_01",
+    ["Jewelcrafting"]    = "Interface\\Icons\\INV_Misc_Gem_01",
+    ["Kochkunst"]        = "Interface\\Icons\\INV_Misc_Food_15",
+    ["Cooking"]          = "Interface\\Icons\\INV_Misc_Food_15",
+    ["Kraeuterkunde"]    = "Interface\\Icons\\Trade_Herbalism",
+    ["Herbalism"]        = "Interface\\Icons\\Trade_Herbalism",
+    ["Kuerschnerei"]     = "Interface\\Icons\\INV_Misc_Pelt_Wolf_01",
+    ["Skinning"]         = "Interface\\Icons\\INV_Misc_Pelt_Wolf_01",
+    ["Lederverarbeitung"]= "Interface\\Icons\\Trade_LeatherWorking",
+    ["Leatherworking"]   = "Interface\\Icons\\Trade_LeatherWorking",
+    ["Schneiderei"]      = "Interface\\Icons\\Trade_Tailoring",
+    ["Tailoring"]        = "Interface\\Icons\\Trade_Tailoring",
+    ["Schmiedekunst"]    = "Interface\\Icons\\Trade_BlackSmithing",
+    ["Blacksmithing"]    = "Interface\\Icons\\Trade_BlackSmithing",
+    ["Verzauberkunst"]   = "Interface\\Icons\\Trade_Engraving",
+    ["Enchanting"]       = "Interface\\Icons\\Trade_Engraving",
+    ["Ziehdienst"]       = "Interface\\Icons\\Ability_Warrior_Charge",
+    ["Carry Service"]    = "Interface\\Icons\\Ability_Warrior_Charge",
 }
 
 if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
@@ -111,9 +262,9 @@ local R  = "|cffff5555"; local Cg = "|cffffd700"; local Cs = "|cffc0c0c0"
 local Ck = "|cffad6333"; local Pu = "|cffcc88ff"; local X  = "|r"
 
 local function Clr(t)
-    if t=="BIETE"  then return Gr..t..X end
-    if t=="SUCHE"  then return Y..t..X end
-    if t=="DIENST" then return Pu..t..X end
+    if t=="BIETE"  then return Gr..L.TYPE_BIETE..X end
+    if t=="SUCHE"  then return Y..L.TYPE_SUCHE..X end
+    if t=="DIENST" then return Pu..L.TYPE_DIENST..X end
     return W..t..X
 end
 
@@ -245,7 +396,7 @@ local addonUsers={}
 local secNormal,secDienst
 local currentFilter="ALL"; local searchText=""
 local postType="BIETE"; local postPriceType="VHB"; local postFree=false; local postBeruf=BERUFE[1]
-local postDungeon="Wunsch-Dungeon"
+local postDungeon=DUNGEONS[1][1]  -- lokalisiert: "Wunsch-Dungeon" (DE) / "Custom Dungeon" (EN)
 rows={}
 
 -- ============================================================
@@ -291,7 +442,7 @@ end
 -- ============================================================
 local infoFrame
 
-local RULES = {
+local RULES = isDE and {
     { G.."1.  Nur echte Angebote"..X,
       "Poste nur Items, Dienste oder Gesuche, die du tatsaechlich anbieten\noder kaufen moechtest. Keine Phantomeintraege oder Spam." },
     { G.."2.  Gildenrabatt"..X,
@@ -308,6 +459,23 @@ local RULES = {
       "Behandle Kaeufer und Verkaeufer so, wie du selbst behandelt\nwerden moechtest. Freundlichkeit ist keine Schwaeche." },
     { G.."8.  Meldepflicht"..X,
       "Unserioses Verhalten bitte umgehend der Gildenleitung\noder einem Offizier melden (Buttons unten)." },
+} or {
+    { G.."1.  Genuine Listings Only"..X,
+      "Only post items, services, or requests you actually intend to offer\nor buy. No placeholder entries or spam." },
+    { G.."2.  Guild Discount"..X,
+      "Offer guild members a better price than you would to outsiders.\nA small discount shows solidarity and is always appreciated." },
+    { G.."3.  Honest Descriptions"..X,
+      "Describe items and services accurately. False claims\n(wrong enchant, wrong condition, etc.) are a violation." },
+    { G.."4.  No Scamming"..X,
+      "Never try to overcharge or deceive fellow guild members.\nTrust within the guild is our most valuable resource." },
+    { G.."5.  Guild Members First"..X,
+      "When there is demand inside the guild, members have priority\nover external buyers or sellers." },
+    { G.."6.  Keep Listings Up to Date"..X,
+      "Remove your listing once the item is sold or the service completed.\nListings expire automatically after 7 days." },
+    { G.."7.  Be Respectful"..X,
+      "Treat buyers and sellers the way you would want to be treated.\nKindness is not a weakness." },
+    { G.."8.  Report Misconduct"..X,
+      "If you witness dishonest behavior, please report it to the\nguild leadership or an officer (buttons below)." },
 }
 
 local function BuildInfoFrame()
@@ -324,7 +492,7 @@ local function BuildInfoFrame()
     f.TitleBg:SetHeight(28)
     local title=f:CreateFontString(nil,"OVERLAY","GameFontHighlight")
     title:SetPoint("CENTER",f.TitleBg,"CENTER",0,2)
-    title:SetText(G.."Gildenmarkt — Regeln & Kontakt"..X)
+    title:SetText(G.."Gildenmarkt — "..L.TT_RULES..X)
 
     -- ScrollFrame fuer Regeltext
     local sf=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
@@ -336,10 +504,9 @@ local function BuildInfoFrame()
     -- Einleitung
     local intro=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
     intro:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-4); intro:SetWidth(462); intro:SetJustifyH("LEFT")
-    local gn=GetGuildInfo("player") or "deiner Gilde"
-    intro:SetText(T.."Herzlich willkommen im Gildenmarkt von \""..gn.."\"!"..X.."\n\n"
-        ..W.."Bitte halte dich an folgende Regeln, damit alle Mitglieder\n"
-        .."fair und angenehm miteinander handeln koennen:"..X)
+    local gn=GetGuildInfo("player") or (isDE and "deiner Gilde" or "your guild")
+    intro:SetText(T..L.INFO_INTRO1.." \""..gn.."\"!"..X.."\n\n"
+        ..W..L.INFO_INTRO2..X)
 
     local yOff=-60
     for _,rule in ipairs(RULES) do
@@ -417,7 +584,7 @@ local function BuildInfoFrame()
         local whisperBtn=CreateFrame("Button",nil,csc,"UIPanelButtonTemplate")
         whisperBtn:SetSize(100,20); whisperBtn:SetPoint("TOPLEFT",csc,"TOPLEFT",328,-rowY-3)
         if not online then whisperBtn:SetAlpha(0.5) end
-        whisperBtn:SetText("Fluestern")
+        whisperBtn:SetText(L.INFO_WHISPER)
         whisperBtn:SetScript("OnClick",function() OpenWhisper(name) end)
         whisperBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_TOP"); GameTooltip:ClearLines(); GameTooltip:AddLine(T.."/w "..name..X); GameTooltip:Show() end)
         whisperBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
@@ -454,19 +621,19 @@ local function BuildInfoFrame()
             end)
         end
         SortOnlineFirst(gm); SortOnlineFirst(officers)
-        for _,n in ipairs(gm)      do PersonRow("Gildenmeister",G,n) end
-        for _,n in ipairs(officers) do PersonRow("Offizier",     T,n) end
+        for _,n in ipairs(gm)      do PersonRow(L.INFO_GM,      G,n) end
+        for _,n in ipairs(officers) do PersonRow(L.INFO_OFFICER, T,n) end
     end
     PopulateLeadership()
 
     -- Schliessen-Button
     local closeBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     closeBtn:SetSize(120,22); closeBtn:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-8,6)
-    closeBtn:SetText("Schliessen"); closeBtn:SetScript("OnClick",function() f:Hide() end)
+    closeBtn:SetText(isDE and "Schliessen" or "Close"); closeBtn:SetScript("OnClick",function() f:Hide() end)
 
     local reloadBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     reloadBtn:SetSize(140,22); reloadBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,6)
-    reloadBtn:SetText("Roster neu laden")
+    reloadBtn:SetText(L.INFO_ROSTER)
     reloadBtn:SetScript("OnClick",function()
         if GuildRoster then GuildRoster() end
         UpdateRoster()
@@ -649,12 +816,12 @@ local function RefreshList()
         -- Online-Dot
         if online then
             row.dotTex:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online"); row.dotTex:SetVertexColor(1,1,1,1)
-            row.onlineBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines(); GameTooltip:AddLine("|cff00ff44"..e.contact.." ist online|r"); GameTooltip:AddLine(Dg.."Klicken zum Fluestern"..X); GameTooltip:Show() end)
+            row.onlineBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines(); GameTooltip:AddLine("|cff00ff44"..e.contact..(isDE and " ist online" or " is online").."|r"); GameTooltip:AddLine(Dg..(isDE and "Klicken zum Fluestern" or "Click to whisper")..X); GameTooltip:Show() end)
             row.onlineBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
             row.onlineBtn:SetScript("OnClick",function() OpenWhisper(e.contact) end)
         else
             row.dotTex:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline"); row.dotTex:SetVertexColor(1,1,1,0.4)
-            row.onlineBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines(); GameTooltip:AddLine(Dg..e.contact.." ist offline"..X); GameTooltip:Show() end)
+            row.onlineBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines(); GameTooltip:AddLine(Dg..e.contact..(isDE and " ist offline" or " is offline")..X); GameTooltip:Show() end)
             row.onlineBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
             row.onlineBtn:SetScript("OnClick",nil)
         end
@@ -666,7 +833,7 @@ local function RefreshList()
             if e.type=="DIENST" then
                 GameTooltip:AddLine(Pu..(e.beruf or "Dienst")..X)
                 GameTooltip:AddLine(W..(e.item or "")..X)
-                if (e.mats or "")~="" then GameTooltip:AddLine(" "); GameTooltip:AddLine(G.."Benoetigt:"..X)
+                if (e.mats or "")~="" then GameTooltip:AddLine(" "); GameTooltip:AddLine(G..L.TT_NEEDED..X)
                     for part in (e.mats..","):gmatch("([^,]+),") do local p=part:match("^%s*(.-)%s*$"); if p~="" then GameTooltip:AddLine("  "..Dg..p..X) end end
                 end
             else
@@ -676,16 +843,16 @@ local function RefreshList()
             GameTooltip:AddLine(" ")
             local pl,pt=FormatPriceLong(e.priceG,e.priceS,e.priceK,e.priceFree,e.priceType)
             GameTooltip:AddLine(pl.."  "..pt)
-            if amt>0 then GameTooltip:AddLine(Dg.."Menge: "..X..G..amt..X) end
+            if amt>0 then GameTooltip:AddLine(Dg..L.TT_AMOUNT..X..G..amt..X) end
             if (e.note or "")~="" then GameTooltip:AddLine(" "); GameTooltip:AddLine('"'..e.note..'"',1,1,1,true) end
-            GameTooltip:AddLine(" "); GameTooltip:AddLine(Dg.."Kontakt: "..X..T..(e.contact or "")..X)
-            GameTooltip:AddLine(Dg.."Laeuft ab: "..X..FormatExpiry(e.expires)); GameTooltip:Show()
+            GameTooltip:AddLine(" "); GameTooltip:AddLine(Dg..L.TT_CONTACT..X..T..(e.contact or "")..X)
+            GameTooltip:AddLine(Dg..L.TT_EXPIRES..X..FormatExpiry(e.expires)); GameTooltip:Show()
         end)
         row:SetScript("OnLeave",function(self) self.border:SetBackdropBorderColor(0.4,0.8,1,0); GameTooltip:Hide() end)
 
         if CanDeleteEntry(e) then
             row.del:Show(); row.del:SetScript("OnClick",function() DeleteListing(id); RefreshList() end)
-            if e.contact~=me then row.del:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines(); GameTooltip:AddLine(R.."Eintrag loeschen"..X); GameTooltip:AddLine(Dg.."Von: "..X..T..(e.contact or "")..X); GameTooltip:Show() end); row.del:SetScript("OnLeave",function() GameTooltip:Hide() end) end
+            if e.contact~=me then row.del:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines(); GameTooltip:AddLine(R..L.TT_DELETE..X); GameTooltip:AddLine(Dg..L.TT_FROM..X..T..(e.contact or "")..X); GameTooltip:Show() end); row.del:SetScript("OnLeave",function() GameTooltip:Hide() end) end
         else row.del:Hide() end
 
         row:SetPoint("TOPLEFT",listContent,"TOPLEFT",0,-y); row:Show(); y=y+ROW_H
@@ -697,7 +864,7 @@ local function RefreshList()
         listContent.empty:SetPoint("CENTER",listContent,"TOP",0,-80); listContent.empty:SetJustifyH("CENTER")
     end
     if #listings==0 then
-        local msg=searchText~="" and (Dg..'Keine Eintraege fuer "'..searchText..'"'..X) or Dg.."Keine Eintraege.\nSync anfordern oder neuen Eintrag posten."..X
+        local msg=searchText~="" and (Dg..L.EMPTY_SEARCH..searchText..'"'..X) or Dg..L.EMPTY_LIST..X
         listContent.empty:SetText(msg); listContent.empty:Show()
     else listContent.empty:Hide() end
     RefreshPostButton()
@@ -752,18 +919,18 @@ local function BuildUI()
         b:SetSize(w or 80,22); b:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",x,-24); b:SetText(label)
         b:SetScript("OnClick",function() currentFilter=filter; RefreshList() end)
     end
-    Tab("Alle","ALL",8,70); Tab("Suche","SUCHE",82,70); Tab("Biete","BIETE",156,70); Tab("Dienst","DIENST",230,70)
+    Tab(L.TAB_ALL,"ALL",8,70); Tab(L.TAB_WTB,"SUCHE",82,70); Tab(L.TAB_WTS,"BIETE",156,70); Tab(L.TAB_SVC,"DIENST",230,70)
 
     countText=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     countText:SetPoint("LEFT",f.InsetBg,"TOPLEFT",310,-32)
 
     userCountText=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     userCountText:SetPoint("RIGHT",f.InsetBg,"TOPRIGHT",-42,-32)
-    userCountText:SetText(G.."1"..X..Dg.." Addon-Nutzer"..X)
+    userCountText:SetText(G.."1"..X..Dg.." "..L.COUNT_USERS..X)
 
     local syncBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     syncBtn:SetSize(80,22); syncBtn:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-38,-24)
-    syncBtn:SetText("Sync"); syncBtn:SetScript("OnClick",function() if GuildRoster then GuildRoster() end; RequestSync(); print(T.."[GuildMarkt]"..X.." Sync...") end)
+    syncBtn:SetText(L.BTN_SYNC); syncBtn:SetScript("OnClick",function() if GuildRoster then GuildRoster() end; RequestSync(); print(T.."[GuildMarkt]"..X.." "..L.MSG_SYNC) end)
 
     -- ══ Such-Leiste ══
     local searchBg=MakeBg(f,0.04,0.04,0.10,0.9,0.2,0.4,0.6)
@@ -771,7 +938,7 @@ local function BuildUI()
     searchBg:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-52); searchBg:SetHeight(26)
 
     local searchIcon=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    searchIcon:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-58); searchIcon:SetText(Dg.."Suche:"..X)
+    searchIcon:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-58); searchIcon:SetText(Dg..L.TT_SEARCH..X)
 
     local ebSearch=CreateFrame("EditBox","GuildMarketSearchBox",f,"InputBoxTemplate")
     ebSearch:SetSize(350,18); ebSearch:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",58,-58)
@@ -796,9 +963,9 @@ local function BuildUI()
         fs:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",col.x+2,-81)
         fs:SetSize(col.w,16); fs:SetJustifyH(align or "LEFT"); fs:SetText(G..txt..X); hdrFS[key]=fs
     end
-    Hdr("icon",""); Hdr("type","Typ"); Hdr("item","Item / Leistung")
-    Hdr("menge","Mng","CENTER"); Hdr("price","Preis"); Hdr("contact","Kontakt")
-    Hdr("online","On","CENTER"); Hdr("expiry","Rest","RIGHT")
+    Hdr("icon",""); Hdr("type",L.HDR_TYPE); Hdr("item",L.HDR_ITEM)
+    Hdr("menge",L.HDR_AMOUNT,"CENTER"); Hdr("price",L.HDR_PRICE); Hdr("contact",L.HDR_CONTACT)
+    Hdr("online",L.HDR_ONLINE,"CENTER"); Hdr("expiry",L.HDR_EXPIRY,"RIGHT")
 
     -- ══ ScrollFrame ══
     local sf=CreateFrame("ScrollFrame","GuildMarketScroll",f,"UIPanelScrollFrameTemplate")
@@ -836,20 +1003,20 @@ local function BuildUI()
     -- ══════════════════════════════════════════
 
     -- Footer
-    local ft =f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); ft:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,22); ft:SetText(Dg.."7 Tage Laufzeit  •  Online-Icon anklicken zum Fluestern"..X)
+    local ft =f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); ft:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,22); ft:SetText(Dg..L.FOOTER1..X)
     local ft2=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); ft2:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8, 8); ft2:SetText("|cff3a3a4aGuildMarket — "..guildName.."  •  by MichaModus|r")
 
     -- ── Buttons ──────────────────────────────── y=44
     local postBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-    postBtn:SetSize(150,28); postBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,44); postBtn:SetText("Eintrag posten")
+    postBtn:SetSize(150,28); postBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,44); postBtn:SetText(L.BTN_POST)
     postBtn_ref=postBtn
 
     local clearBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-    clearBtn:SetSize(190,28); clearBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",166,44); clearBtn:SetText("Meine Eintraege loeschen")
+    clearBtn:SetSize(190,28); clearBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",166,44); clearBtn:SetText(L.BTN_CLEAR)
     clearBtn:SetScript("OnClick",function()
         local me2,n=UnitName("player"),0
         for id,e in pairs(GuildMarketDB.listings) do if e.contact==me2 then DeleteListing(id); n=n+1 end end
-        RefreshList(); print(T.."[GuildMarkt]"..X.." "..n.." Eintraege geloescht.")
+        RefreshList(); print(T.."[GuildMarkt]"..X.." "..n.." "..L.MSG_DELETED)
     end)
 
     -- ── Notiz ────────────────────────────────── bg y=76..116
@@ -857,7 +1024,7 @@ local function BuildUI()
     notizBg:SetPoint("BOTTOMLEFT", f.InsetBg,"BOTTOMLEFT",4, 101)
     notizBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,101); notizBg:SetHeight(40)
     local lbNote=notizBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbNote:SetPoint("TOPLEFT",notizBg,"TOPLEFT",6,-6); lbNote:SetText(Dg.."Notiz (optional):"..X)
+    lbNote:SetPoint("TOPLEFT",notizBg,"TOPLEFT",6,-6); lbNote:SetText(Dg..L.LBL_NOTE..X)
     local ebNote=CreateFrame("EditBox","GuildMarketNoteBox",f,"InputBoxTemplate")
     ebNote:SetPoint("BOTTOMLEFT", f.InsetBg,"BOTTOMLEFT",116, 105)
     ebNote:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT", -10, 105)
@@ -869,7 +1036,7 @@ local function BuildUI()
     preisBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,141); preisBg:SetHeight(50)
 
     local lbPreis=preisBg:CreateFontString(nil,"OVERLAY","GameFontNormal")
-    lbPreis:SetPoint("TOPLEFT",preisBg,"TOPLEFT",6,-6); lbPreis:SetText(G.."Preis:"..X)
+    lbPreis:SetPoint("TOPLEFT",preisBg,"TOPLEFT",6,-6); lbPreis:SetText(G..L.LBL_PRICE..X)
 
     -- Coin-Felder: Label oben, Box unten (TOPLEFT von preisBg)
     local function CoinF(lbl,color,bx)
@@ -880,30 +1047,29 @@ local function BuildUI()
         eb:SetAutoFocus(false); eb:SetMaxLetters(6); eb:SetNumeric(true)
         return eb
     end
-    local ebGold=CoinF("Gold",Cg,56); local ebSilber=CoinF("Silber",Cs,150); local ebKupfer=CoinF("Kupfer",Ck,254)
+    local ebGold=CoinF(L.LBL_GOLD,Cg,56); local ebSilber=CoinF(L.LBL_SILVER,Cs,150); local ebKupfer=CoinF(L.LBL_COPPER,Ck,254)
 
     local freeBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-    freeBtn:SetSize(90,22); freeBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",346,145); freeBtn:SetText("Free: Nein")
+    freeBtn:SetSize(90,22); freeBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",346,145); freeBtn:SetText(L.BTN_FREE_N)
     freeBtn:SetScript("OnClick",function()
         postFree=not postFree
-        if postFree then freeBtn:SetText("Free: JA"); ebGold:Disable(); ebSilber:Disable(); ebKupfer:Disable()
-        else freeBtn:SetText("Free: Nein"); ebGold:Enable(); ebSilber:Enable(); ebKupfer:Enable() end
+        if postFree then freeBtn:SetText(L.BTN_FREE_Y); ebGold:Disable(); ebSilber:Disable(); ebKupfer:Disable()
+        else freeBtn:SetText(L.BTN_FREE_N); ebGold:Enable(); ebSilber:Enable(); ebKupfer:Enable() end
     end)
 
     -- FP/VHB: Label y=144, Button y=120
     local lbPType=preisBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbPType:SetPoint("TOPLEFT",preisBg,"TOPLEFT",444,-6); lbPType:SetText(Dg.."Art:"..X)
+    lbPType:SetPoint("TOPLEFT",preisBg,"TOPLEFT",444,-6); lbPType:SetText(Dg..L.LBL_PTYPE..X)
     local ddPType=CreateFrame("Frame","GuildMarketDDPType",f,"UIDropDownMenuTemplate")
     ddPType:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",434,146); UIDropDownMenu_SetWidth(ddPType,110)
     UIDropDownMenu_Initialize(ddPType,function(_,level)
-        for _,opt in ipairs({"Festpreis","VHB"}) do
-            local val=opt=="Festpreis" and "FP" or "VHB"
-            local info=UIDropDownMenu_CreateInfo(); info.text=opt; info.value=val; info.checked=(postPriceType==val)
+        for _,pair in ipairs({{L.PT_FIXED,"FP"},{L.PT_NEG,"VHB"}}) do
+            local info=UIDropDownMenu_CreateInfo(); info.text=pair[1]; info.value=pair[2]; info.checked=(postPriceType==pair[2])
             info.func=function(btn) postPriceType=btn.value; UIDropDownMenu_SetSelectedValue(ddPType,btn.value); UIDropDownMenu_SetText(ddPType,btn.text) end
             UIDropDownMenu_AddButton(info,level)
         end
     end)
-    UIDropDownMenu_SetSelectedValue(ddPType,"VHB"); UIDropDownMenu_SetText(ddPType,"VHB")
+    UIDropDownMenu_SetSelectedValue(ddPType,"VHB"); UIDropDownMenu_SetText(ddPType,L.PT_NEG)
 
     -- ── Eintrag-Sektion ──────────────────────── bg y=166..266
     local itemBg=MakeBg(f,0.05,0.05,0.14,0.95,0.18,0.28,0.50)
@@ -912,10 +1078,10 @@ local function BuildUI()
 
     -- Kinder von itemBg → rendern ÜBER dem Backdrop-Rahmen (OVERLAY > BORDER)
     local newLbl=itemBg:CreateFontString(nil,"OVERLAY","GameFontNormal")
-    newLbl:SetPoint("TOPLEFT",itemBg,"TOPLEFT",8,-8); newLbl:SetText(G.."Neuer Eintrag"..X)
+    newLbl:SetPoint("TOPLEFT",itemBg,"TOPLEFT",8,-8); newLbl:SetText(G..L.NEW_LISTING..X)
 
     local lbTyp=itemBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbTyp:SetPoint("TOPLEFT",itemBg,"TOPLEFT",8,-26); lbTyp:SetText(Dg.."Typ:"..X)
+    lbTyp:SetPoint("TOPLEFT",itemBg,"TOPLEFT",8,-26); lbTyp:SetText(Dg..L.LBL_TYPE..X)
 
     local ddType=CreateFrame("Frame","GuildMarketDDType",f,"UIDropDownMenuTemplate")
     ddType:SetPoint("TOPLEFT",itemBg,"TOPLEFT",-4,-40)
@@ -927,7 +1093,7 @@ local function BuildUI()
 
     local lbI=sN:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     -- x=120: klar rechts vom Dropdown-Ende (110), mit 10px Luft
-    lbI:SetPoint("TOPLEFT",sN,"TOPLEFT",120,-2); lbI:SetText(Dg.."Item  (Drag aus Bag oder Shift+Klick):"..X)
+    lbI:SetPoint("TOPLEFT",sN,"TOPLEFT",120,-2); lbI:SetText(Dg..L.LBL_ITEM..X)
 
     ebItem=CreateFrame("EditBox","GuildMarketItemBox",sN,"InputBoxTemplate")
     ebItem:SetSize(418,22); ebItem:SetPoint("TOPLEFT",sN,"TOPLEFT",120,-16)
@@ -937,7 +1103,7 @@ local function BuildUI()
     ebItem:SetScript("OnTextChanged",function(self) if self.itemLink then local nm=self.itemLink:match("|h%[(.-)%]|h"); if nm~=self:GetText() then self.itemLink=nil end end end)
 
     local lbMg=sN:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbMg:SetPoint("TOPLEFT",sN,"TOPLEFT",550,-2); lbMg:SetText(Dg.."Menge:"..X)
+    lbMg:SetPoint("TOPLEFT",sN,"TOPLEFT",550,-2); lbMg:SetText(Dg..L.LBL_AMOUNT..X)
     local ebAmt=CreateFrame("EditBox","GuildMarketAmtBox",sN,"InputBoxTemplate")
     ebAmt:SetSize(88,22); ebAmt:SetPoint("TOPLEFT",sN,"TOPLEFT",550,-16)
     ebAmt:SetAutoFocus(false); ebAmt:SetMaxLetters(6); ebAmt:SetNumeric(true)
@@ -948,13 +1114,13 @@ local function BuildUI()
 
     -- Zeile 1 Beruf + Leistung
     local lbB=sD:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbB:SetPoint("TOPLEFT",sD,"TOPLEFT",120,-2); lbB:SetText(Dg.."Beruf:"..X)
+    lbB:SetPoint("TOPLEFT",sD,"TOPLEFT",120,-2); lbB:SetText(Dg..L.LBL_PROF..X)
 
     local ddBeruf=CreateFrame("Frame","GuildMarketDDBeruf",sD,"UIDropDownMenuTemplate")
     ddBeruf:SetPoint("TOPLEFT",sD,"TOPLEFT",106,-14)
     UIDropDownMenu_SetWidth(ddBeruf,130)  -- button ≈ 156px → endet bei x=276
     local lbL=sD:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbL:SetPoint("TOPLEFT",sD,"TOPLEFT",286,-2); lbL:SetText(Dg.."Leistung / Bezeichnung:"..X)
+    lbL:SetPoint("TOPLEFT",sD,"TOPLEFT",286,-2); lbL:SetText(Dg..L.LBL_SERVICE..X)
 
     local ebLeist=CreateFrame("EditBox","GuildMarketLeistBox",sD,"InputBoxTemplate")
     ebLeist:SetSize(352,22); ebLeist:SetPoint("TOPLEFT",sD,"TOPLEFT",286,-16)
@@ -984,11 +1150,12 @@ local function BuildUI()
     end
 
     local function UpdateDienstFields()
-        if postBeruf=="Ziehdienst" then
-            ebLeist:Hide(); ddDungeon:Show(); lbL:SetText(Dg.."Dungeon:"..X)
+        local carryName = isDE and "Ziehdienst" or "Carry Service"
+        if postBeruf==carryName then
+            ebLeist:Hide(); ddDungeon:Show(); lbL:SetText(Dg..L.LBL_DUNGEON..X)
             RefreshDungeonDD()
         else
-            ddDungeon:Hide(); ebLeist:Show(); lbL:SetText(Dg.."Leistung / Bezeichnung:"..X)
+            ddDungeon:Hide(); ebLeist:Show(); lbL:SetText(Dg..L.LBL_SERVICE..X)
         end
     end
 
@@ -1008,7 +1175,7 @@ local function BuildUI()
     local sMats=CreateFrame("Frame",nil,f)
     sMats:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",0,213); sMats:SetSize(660,44); sMats:Hide()
     local lbM=sMats:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbM:SetPoint("TOPLEFT",sMats,"TOPLEFT",120,-4); lbM:SetText(Dg.."Benoetigte Mats (kommagetrennt):"..X)
+    lbM:SetPoint("TOPLEFT",sMats,"TOPLEFT",120,-4); lbM:SetText(Dg..L.LBL_MATS..X)
     local ebMats=CreateFrame("EditBox","GuildMarketMatsBox",sMats,"InputBoxTemplate")
     ebMats:SetSize(516,22); ebMats:SetPoint("BOTTOMLEFT",sMats,"BOTTOMLEFT",120,4)
     ebMats:SetAutoFocus(false); ebMats:SetMaxLetters(80)
@@ -1036,41 +1203,43 @@ local function BuildUI()
         end
     end
 
+    local TYPE_OPTS={{v="BIETE",t=L.TYPE_BIETE},{v="SUCHE",t=L.TYPE_SUCHE},{v="DIENST",t=L.TYPE_DIENST}}
     UIDropDownMenu_Initialize(ddType,function(_,level)
-        for _,t in ipairs({"BIETE","SUCHE","DIENST"}) do
-            local info=UIDropDownMenu_CreateInfo(); info.text=t; info.value=t; info.checked=(postType==t)
-            info.func=function(btn) postType=btn.value; UIDropDownMenu_SetSelectedValue(ddType,btn.value); UIDropDownMenu_SetText(ddType,btn.value); ShowSection(btn.value) end
+        for _,td in ipairs(TYPE_OPTS) do
+            local info=UIDropDownMenu_CreateInfo(); info.text=td.t; info.value=td.v; info.checked=(postType==td.v)
+            info.func=function(btn) postType=btn.value; UIDropDownMenu_SetSelectedValue(ddType,btn.value); UIDropDownMenu_SetText(ddType,btn.text); ShowSection(btn.value) end
             UIDropDownMenu_AddButton(info,level)
         end
     end)
-    UIDropDownMenu_SetSelectedValue(ddType,"BIETE"); UIDropDownMenu_SetText(ddType,"BIETE")
+    UIDropDownMenu_SetSelectedValue(ddType,"BIETE"); UIDropDownMenu_SetText(ddType,L.TYPE_BIETE)
     ShowSection(postType)  -- initiale Anpassung (setzt itemBg-Höhe + sf/div)
 
     -- ── Post-Button ──────────────────────────────────────────
     postBtn:SetScript("OnClick",function()
-        if not CanPost() then print(R.."[GuildMarkt]"..X.." Kein Zugriff."); return end
+        if not CanPost() then print(R.."[GuildMarkt]"..X.." "..L.MSG_NO_ACCESS); return end
         local name,link,beruf,mats,amount
+        local carryName = isDE and "Ziehdienst" or "Carry Service"
         if postType=="DIENST" then
-            if postBeruf=="Ziehdienst" then
+            if postBeruf==carryName then
                 name=postDungeon; link=nil; beruf=postBeruf; mats=ebMats:GetText(); amount=0
-                if not name or name=="" then print(R.."[GuildMarkt]"..X.." Bitte Dungeon auswaehlen."); return end
+                if not name or name=="" then print(R.."[GuildMarkt]"..X.." "..L.MSG_NO_DGN); return end
             else
                 name=ebLeist:GetText(); link=ebLeist.itemLink; beruf=postBeruf; mats=ebMats:GetText(); amount=0
-                if name=="" then print(R.."[GuildMarkt]"..X.." Bitte Leistung eingeben."); return end
+                if name=="" then print(R.."[GuildMarkt]"..X.." "..L.MSG_NO_SVC); return end
             end
         else
             name=ebItem:GetText(); link=ebItem.itemLink; beruf=""; mats=""
             amount=tonumber(ebAmt:GetText()) or 0
-            if name=="" then print(R.."[GuildMarkt]"..X.." Bitte Item eingeben."); return end
+            if name=="" then print(R.."[GuildMarkt]"..X.." "..L.MSG_NO_ITEM); return end
         end
         local pg=ebGold:GetText(); local ps=ebSilber:GetText(); local pk=ebKupfer:GetText()
         PostListing(postType,name,amount,ebNote:GetText(),link,pg,ps,pk,postFree and "1" or "0",postPriceType,beruf,mats)
         ebItem:SetText(""); ebItem.itemLink=nil; ebLeist:SetText(""); ebLeist.itemLink=nil
-        postDungeon="Wunsch-Dungeon"
+        postDungeon=DUNGEONS[1][1]
         ebGold:SetText(""); ebSilber:SetText(""); ebKupfer:SetText("")
         ebAmt:SetText(""); ebNote:SetText(""); ebMats:SetText("")
-        postFree=false; freeBtn:SetText("Free: Nein"); ebGold:Enable(); ebSilber:Enable(); ebKupfer:Enable()
-        RefreshList(); print(T.."[GuildMarkt]"..X.." Gepostet: "..Clr(postType).." "..W..name..X)
+        postFree=false; freeBtn:SetText(L.BTN_FREE_N); ebGold:Enable(); ebSilber:Enable(); ebKupfer:Enable()
+        RefreshList(); print(T.."[GuildMarkt]"..X.." "..L.MSG_POSTED.." "..Clr(postType).." "..W..name..X)
     end)
 
     mainFrame=f
@@ -1106,19 +1275,19 @@ ev:SetScript("OnEvent",function(self,event,...)
         InitDB(); PruneExpired(); if GuildRoster then GuildRoster() end
         local me=UnitName("player"); if me then addonUsers[me]=true end
         DelayCall(6,function() BroadcastMine(); RequestSync() end)
-        print(T.."[GuildMarkt]"..X.." Geladen — "..G.."/gmarkt"..X.." | "..Dg..(GetGuildInfo("player") or "")..X)
+        print(T.."[GuildMarkt]"..X.." "..L.MSG_LOADED.." — "..G.."/gmarkt"..X.." | "..Dg..(GetGuildInfo("player") or "")..X)
     elseif event=="GUILD_ROSTER_UPDATE" then
         UpdateRoster(); if mainFrame and mainFrame:IsShown() then RefreshList() end
     elseif event=="CHAT_MSG_ADDON" then
         local prefix,msg,_,sender=...
         if prefix~=MSG_PREFIX then return end
         local sn=sender:match("^([^%-]+)") or sender; addonUsers[sn]=true
-        if userCountText then local n=0; for _ in pairs(addonUsers) do n=n+1 end; userCountText:SetText(G..n..X..Dg.." Addon-Nutzer"..X) end
+        if userCountText then local n=0; for _ in pairs(addonUsers) do n=n+1 end; userCountText:SetText(G..n..X..Dg.." "..L.COUNT_USERS..X) end
         if msg=="REQ" then BroadcastMine(); return end
         if msg:sub(1,3)=="CFG" then
             local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
             if p[2] and p[3] then GuildMarketDB.config.postRank=tonumber(p[2]) or 9; GuildMarketDB.config.deleteRank=tonumber(p[3]) or 1
-                print(T.."[GuildMarkt]"..X.." Einstellungen aktualisiert."); if mainFrame and mainFrame:IsShown() then RefreshList() end end; return
+                print(T.."[GuildMarkt]"..X.." "..L.MSG_SETTINGS); if mainFrame and mainFrame:IsShown() then RefreshList() end end; return
         end
         if msg:sub(1,3)=="DEL" then
             local id=msg:sub(5)

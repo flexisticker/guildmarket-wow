@@ -1,9 +1,9 @@
-## Interface: 11508
+﻿## Interface: 11508
 ## Title: GuildMarket
-## Notes: Internal guild marketplace for "Der Hohe Rat" — WTB/WTS listings via guild sync
-## Notes-deDE: Gildeninterner Marktplatz fuer "Der Hohe Rat" — Suche/Biete via Gildensync
+## Notes: Guild-internal marketplace — WTB/WTS/Service listings via guild sync
+## Notes-deDE: Gildeninterner Marktplatz — Suche/Biete/Dienst via Gildensync
 ## Author: MichaModus
-## Version: 0.9.7-beta
+## Version: 0.9.8-beta
 ## X-Curse-Project-ID: 1589741
 ## DefaultState: Enabled
 ## X-GitHub: https://github.com/flexisticker/guildmarket-wow

@@ -5,6 +5,21 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [0.9.8-beta] · 2026-06-27 · Lokalisierung (DE/EN), Responsives Formular
+
+### Added
+- **Vollständige Lokalisierung**: automatische Spracherkennung via `GetLocale()` — Deutsch bei deDE, sonst Englisch
+- Alle UI-Labels, Buttons, Tabs, Tooltips, Fehlermeldungen und Regeln übersetzt
+- Lokalisierte Berufsliste (BERUFE) und Dungeon-Namen (DUNGEONS)
+- BERUF_ICONS unterstützt jetzt DE- und EN-Keys
+
+### Fixed
+- **Responsives Formular**: `ShowSection()` resized `itemBg` dynamisch (95px BIETE/SUCHE, 120px DIENST)
+- Labels (`newLbl`, `lbTyp`, `lbNote`, `lbPreis`, Coin-Labels) sind jetzt Kinder ihrer Backdrop-Frames — renderten vorher verdeckt hinter dem Rahmen (WoW Z-Order: Kindframes überdecken FontStrings des Elternframes)
+- Alle Formular-Interna auf TOPLEFT-Anchoring umgestellt (kein neg. y-Overflow mehr)
+
+---
+
 ## [0.9.7-beta] · 2026-06-27 · Ziehdienst, Addon-Nutzer-Zähler, Fenster höher
 
 ### Added
