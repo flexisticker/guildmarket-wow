@@ -31,5 +31,5 @@ jobs:
       - name: Publish to CurseForge
         uses: BigWigsMods/packager@v2
         env:
-          CF_API_KEY: ${{ secrets.CURSEFORGE }}
+          CF_API_KEY: ${{ secrets.gmarketAddon }}
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}

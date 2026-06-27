@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.4.0-alpha] - 2026-06-27
+
+### Added
+- Online-Status Spalte: gruener Punkt (online) / grauer Kreis (offline) pro Eintrag
+- Klick auf gruenen Punkt oeffnet direkt den Fluestern-Chat
+- Online-Eintraege werden in der Liste nach oben sortiert
+- Resizable Frame — Griff unten rechts, Minimum 470x560
+- Eintragsanzahl-Anzeige (gesamt / Biete / Suche)
+- Item-Qualitaetsfarbe in der Liste (gruen/blau/lila/orange)
+- Dynamischer Gildenname via GetGuildInfo("player") — kein Hardcode mehr
+- Konsistente Spaltenausrichtung Header + Zeilen via COL-Konstanten
+- Hover-Rahmen-Effekt auf Zeilen
+- Fenster zentriert sich bei jedem Oeffnen auf UIParent
+
+### Fixed
+- GuildRoster() existiert nicht in TBC Classic — sicherer nil-Check
+- Frame-Position (SetPoint CENTER wird beim Oeffnen neu gesetzt)
+- SendAddonMessage nil — Kompatibilitaets-Wrapper fuer C_ChatInfo
+
 ## [0.1.0-alpha] - 2026-06-27
 
 ### Added
