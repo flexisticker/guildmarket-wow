@@ -98,6 +98,39 @@ local L = {
     EMPTY_SEARCH = isDE and 'Keine Eintraege fuer "' or 'No listings for "',
     EMPTY_LIST   = isDE and "Keine Eintraege.\nSync anfordern oder neuen Eintrag posten."
                         or  "No listings.\nRequest sync or post a new listing.",
+    -- Kalender / Calendar
+    CAL_TAB      = isDE and "Kalender"  or "Calendar",
+    CAL_NEW      = isDE and "Neues Event" or "New Event",
+    CAL_TITLE    = isDE and "Titel:"    or "Title:",
+    CAL_DATE     = isDE and "Datum (TT.MM.JJJJ):"  or "Date (DD.MM.YYYY):",
+    CAL_TIME     = isDE and "Uhrzeit (HH:MM):"      or "Time (HH:MM):",
+    CAL_MAX      = isDE and "Max. Teilnehmer (0=∞):" or "Max. Signups (0=∞):",
+    CAL_DESC     = isDE and "Beschreibung (optional):" or "Description (optional):",
+    CAL_CREATE   = isDE and "Event erstellen"   or "Create Event",
+    CAL_SIGNUP   = isDE and "Anmelden"          or "Sign up",
+    CAL_LEAVE    = isDE and "Abmelden"          or "Leave",
+    CAL_CLOSED   = isDE and "Ausgebucht"        or "Full",
+    CAL_DETAIL   = isDE and "Event-Details"     or "Event Details",
+    CAL_SIGNUPS  = isDE and "Anmeldungen:"      or "Signups:",
+    CAL_ATTENDEES= isDE and "Teilnehmer"        or "Attendees",
+    CAL_NOEVENTS = isDE and "Keine Events.\nOffiziere koennen Events erstellen (/gmarkt)."
+                        or  "No events.\nOfficers can create events (/gmarkt).",
+    CAL_NORANKC  = isDE and "Kein Zugriff — nur Offiziere koennen Events erstellen."
+                        or  "No access — only officers can create events.",
+    CAL_NOTITLE  = isDE and "Bitte Titel eingeben."   or "Please enter a title.",
+    CAL_NODATE   = isDE and "Ungültiges Datum. Format: TT.MM.JJJJ" or "Invalid date. Format: DD.MM.YYYY",
+    CAL_NOTIME   = isDE and "Ungültige Uhrzeit. Format: HH:MM"     or "Invalid time. Format: HH:MM",
+    CAL_PAST     = isDE and "Datum liegt in der Vergangenheit."     or "Date is in the past.",
+    CAL_CREATED  = isDE and "Event erstellt:"  or "Event created:",
+    CAL_DELETED  = isDE and "Event geloescht." or "Event deleted.",
+    CAL_JOINED   = isDE and "Angemeldet fuer:" or "Signed up for:",
+    CAL_LEFT     = isDE and "Abgemeldet von:"  or "Left event:",
+    CAL_CREATOR  = isDE and "Ersteller: "      or "Creator: ",
+    CAL_HDR_DATE = isDE and "Datum"  or "Date",
+    CAL_HDR_TTL  = isDE and "Titel"  or "Title",
+    CAL_HDR_ATT  = isDE and "Ang."   or "Att.",
+    CAL_NOSIGNUP = isDE and "Noch keine Anmeldungen." or "No signups yet.",
+    CFG_EVTRANK  = isDE and "Event erstellen ab:" or "Event creation rank:",
 }
 
 -- Spalten (icon + verschiebt sich rechts von item beim Resize)
@@ -330,11 +363,20 @@ end
 local function InitDB()
     if not GuildMarketDB          then GuildMarketDB={} end
     if not GuildMarketDB.listings then GuildMarketDB.listings={} end
-    if not GuildMarketDB.config   then GuildMarketDB.config={postRank=9,deleteRank=1} end
+    if not GuildMarketDB.events   then GuildMarketDB.events={} end
+    if not GuildMarketDB.config   then GuildMarketDB.config={postRank=9,deleteRank=1,eventRank=1} end
+    if not GuildMarketDB.config.eventRank then GuildMarketDB.config.eventRank=1 end
 end
 local function PruneExpired()
     local now=time()
     for id,e in pairs(GuildMarketDB.listings) do if e.expires<now then GuildMarketDB.listings[id]=nil end end
+end
+local function PruneExpiredEvents()
+    if not GuildMarketDB or not GuildMarketDB.events then return end
+    local now=time(); local oneDay=86400
+    for id,ev in pairs(GuildMarketDB.events) do
+        if (ev.datets or 0)+oneDay < now then GuildMarketDB.events[id]=nil end
+    end
 end
 
 -- ============================================================
@@ -364,6 +406,57 @@ local function DeleteListing(id) GuildMarketDB.listings[id]=nil; SendGuild("DEL|
 local function RequestSync()     SendGuild("REQ") end
 local function BroadcastConfig() local c=GuildMarketDB.config; SendGuild("CFG|"..c.postRank.."|"..c.deleteRank) end
 local function BroadcastMine()   local me=UnitName("player"); for id,e in pairs(GuildMarketDB.listings) do if e.contact==me then Broadcast(id,e) end end end
+
+-- ============================================================
+-- Kalender-Hilfsfunktionen / Calendar helpers
+-- ============================================================
+local function ParseEventDate(str)
+    local d,m,y=str:match("^(%d+)%.(%d+)%.(%d+)$")
+    if not d then return nil end
+    d,m,y=tonumber(d),tonumber(m),tonumber(y); if y<100 then y=y+2000 end
+    local ok,ts=pcall(time,{year=y,month=m,day=d,hour=0,min=0,sec=0})
+    return ok and ts or nil
+end
+local function FormatEventDate(ts) return date("%d.%m.%Y",ts) end
+local function FormatEventShort(ts,tstr) return date("%d.%m.",ts)..(tstr or "") end
+local function TodayTs() local t=date("*t"); return time({year=t.year,month=t.month,day=t.day,hour=0,min=0,sec=0}) end
+local function CanCreateEvent()
+    if not GuildMarketDB or not GuildMarketDB.config then return playerRankIndex<=1 end
+    return playerRankIndex<=(GuildMarketDB.config.eventRank or 1)
+end
+local function SerializeEvent(id,ev)
+    local title=(ev.title or ""):gsub("|",""):sub(1,50)
+    local desc=(ev.desc or ""):gsub("|",""):sub(1,60)
+    local tstr=(ev.tstr or "00:00"):sub(1,5)
+    return "EVTPOST|"..id.."|"..title.."|"..tostring(ev.datets or 0).."|"..tstr.."|"..tostring(ev.maxsign or 0).."|"..desc
+end
+local function DeserializeEvent(msg)
+    local t={}; for p in (msg.."|"):gmatch("([^|]*)|") do t[#t+1]=p end
+    if #t<7 then return nil,nil end
+    return t[2],{title=t[3],datets=tonumber(t[4]) or 0,tstr=t[5],maxsign=tonumber(t[6]) or 0,desc=t[7] or "",signups={},creator=""}
+end
+local function PostEvent(title,datets,tstr,maxsign,desc)
+    local me=UnitName("player"); local id="EVT:"..me..":"..time()
+    local ev={title=title,datets=datets,tstr=tstr,maxsign=maxsign,desc=desc,signups={[me]=true},creator=me,created=time()}
+    GuildMarketDB.events[id]=ev; SendGuild(SerializeEvent(id,ev)); SendGuild("EVTSIGN|"..id); return id
+end
+local function DeleteEvent(id) GuildMarketDB.events[id]=nil; SendGuild("EVTDEL|"..id) end
+local function SignEvent(id)
+    local ev=GuildMarketDB.events[id]; if not ev then return end
+    local me=UnitName("player"); ev.signups[me]=true; SendGuild("EVTSIGN|"..id)
+end
+local function UnsignEvent(id)
+    local ev=GuildMarketDB.events[id]; if not ev then return end
+    local me=UnitName("player"); ev.signups[me]=nil; SendGuild("EVTUNSIGN|"..id)
+end
+local function BroadcastEvents()
+    if not GuildMarketDB or not GuildMarketDB.events then return end
+    local me=UnitName("player")
+    for id,ev in pairs(GuildMarketDB.events) do
+        if ev.creator==me then SendGuild(SerializeEvent(id,ev)) end
+        if ev.signups and ev.signups[me] then SendGuild("EVTSIGN|"..id) end
+    end
+end
 local function PostListing(etype,item,amount,note,link,pg,ps,pk,pfree,ptype,beruf,mats)
     local me=UnitName("player"); local now=time(); local id=me.."-"..now
     local itemId=link and tonumber(link:match("|Hitem:(%d+)"))
@@ -390,11 +483,12 @@ end
 -- ============================================================
 -- UI Globals
 -- ============================================================
-local mainFrame,configFrame,listContent,countText,userCountText,rows,ebItem
+local mainFrame,configFrame,listContent,calContent,countText,userCountText,rows,ebItem
 local hdrFS={}; local postBtn_ref
 local addonUsers={}
 local secNormal,secDienst
 local currentFilter="ALL"; local searchText=""
+local currentMode="LIST"; local selectedEventId=nil
 local postType="BIETE"; local postPriceType="VHB"; local postFree=false; local postBeruf=BERUFE[1]
 local postDungeon=DUNGEONS[1][1]  -- lokalisiert: "Wunsch-Dungeon" (DE) / "Custom Dungeon" (EN)
 rows={}
@@ -649,7 +743,7 @@ end
 local function BuildConfigFrame()
     if configFrame then configFrame:Show(); return end
     local f=CreateFrame("Frame","GuildMarketConfigFrame",UIParent,"BasicFrameTemplateWithInset")
-    f:SetSize(380,230); f:SetPoint("CENTER",UIParent,"CENTER",0,0)
+    f:SetSize(380,290); f:SetPoint("CENTER",UIParent,"CENTER",0,0)
     f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
     f:SetFrameStrata("DIALOG"); f:SetFrameLevel(20); f:Hide()
@@ -672,16 +766,17 @@ local function BuildConfigFrame()
             local c=getV(); UIDropDownMenu_SetSelectedValue(dd,c); UIDropDownMenu_SetText(dd,"["..c.."] "..(rn[c] or "Rang "..c))
         end; return dd
     end
-    local ddP=RankDD("Post",8,-34,function() return GuildMarketDB.config.postRank end,function(v) GuildMarketDB.config.postRank=v end,G.."Posten erlaubt ab Rang:"..X)
-    local ddD=RankDD("Del",8,-96,function() return GuildMarketDB.config.deleteRank end,function(v) GuildMarketDB.config.deleteRank=v end,G.."Fremde Eintraege loeschen ab Rang:"..X)
-    local i2=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); i2:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",8,-164); i2:SetText(Dg.."Rang 0 = Gildenmeister  (niedrigere Zahl = hoehere Position)"..X)
+    local ddP=RankDD("Post",8,-34,function() return GuildMarketDB.config.postRank end,function(v) GuildMarketDB.config.postRank=v end,G..L.CFG_POSTRANK..X)
+    local ddD=RankDD("Del",8,-96,function() return GuildMarketDB.config.deleteRank end,function(v) GuildMarketDB.config.deleteRank=v end,G..L.CFG_DELRANK..X)
+    local ddE=RankDD("Evt",8,-158,function() return GuildMarketDB.config.eventRank or 1 end,function(v) GuildMarketDB.config.eventRank=v end,G..L.CFG_EVTRANK..X)
+    local i2=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); i2:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",8,-222); i2:SetText(Dg.."Rang 0 = Gildenmeister  (niedrigere Zahl = hoehere Position)"..X)
     local sB=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); sB:SetSize(160,26); sB:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,12); sB:SetText("Speichern & Sync")
     sB:SetScript("OnClick",function() if not IsGM() then print(R.."[GuildMarkt]"..X.." Nur GM."); return end; BroadcastConfig(); print(T.."[GuildMarkt]"..X.." Gespeichert."); f:Hide() end)
     local cB=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); cB:SetSize(80,26); cB:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",176,12); cB:SetText("Schliessen"); cB:SetScript("OnClick",function() f:Hide() end)
     f:SetScript("OnShow",function()
         if not IsGM() then sB:Disable(); hint:SetText(R.."Nur der Gildenmeister kann aendern."..X)
         else sB:Enable(); hint:SetText(Dg.."Einstellungen werden per Sync verteilt."..X) end
-        ddP:Refresh(); ddD:Refresh()
+        ddP:Refresh(); ddD:Refresh(); ddE:Refresh()
     end)
     configFrame=f; f:Show()
 end
@@ -871,6 +966,181 @@ local function RefreshList()
 end
 
 -- ============================================================
+-- Kalender: RefreshCalendar + Event-Detail-Popup
+-- ============================================================
+local CAL_ROW_H = 28
+local eventDetailFrame = nil
+
+local function RefreshCalendar()
+    if not calContent then return end
+    for _,r in ipairs(calContent.calRows or {}) do r:Hide() end
+    calContent.calRows={}
+    if not GuildMarketDB or not GuildMarketDB.events then return end
+    local me=UnitName("player"); local now=time(); local today=TodayTs()
+    local evList={}
+    for id,ev in pairs(GuildMarketDB.events) do
+        if (ev.datets or 0)+86400>=now then evList[#evList+1]={id=id,ev=ev} end
+    end
+    table.sort(evList,function(a,b) return (a.ev.datets or 0)<(b.ev.datets or 0) end)
+    local y=0
+    for _,entry in ipairs(evList) do
+        local id,ev=entry.id,entry.ev
+        local signedUp=(ev.signups or {})[me]==true
+        local sigCount=0; for _ in pairs(ev.signups or {}) do sigCount=sigCount+1 end
+        local maxS=ev.maxsign or 0; local isFull=maxS>0 and sigCount>=maxS and not signedUp
+        local isToday=ev.datets==today; local isFuture=(ev.datets or 0)>today
+        local row=CreateFrame("Button",nil,calContent,"BackdropTemplate")
+        row:SetSize(ROW_W,CAL_ROW_H); row:SetPoint("TOPLEFT",calContent,"TOPLEFT",0,-y)
+        row:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=6,
+            insets={left=2,right=2,top=2,bottom=2}})
+        if isToday then row:SetBackdropColor(0.06,0.12,0.06,0.92); row:SetBackdropBorderColor(0.2,0.7,0.15,0.9)
+        elseif isFuture then row:SetBackdropColor(0.06,0.06,0.14,0.9); row:SetBackdropBorderColor(0.2,0.2,0.45,0.7)
+        else row:SetBackdropColor(0.08,0.08,0.08,0.7); row:SetBackdropBorderColor(0.15,0.15,0.15,0.5) end
+        local oy=-math.floor((CAL_ROW_H-14)/2)
+        local fDT=row:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        fDT:SetPoint("TOPLEFT",row,"TOPLEFT",4,oy); fDT:SetSize(96,14)
+        fDT:SetText(isToday and Gr..FormatEventShort(ev.datets,ev.tstr)..X
+            or (isFuture and T..FormatEventShort(ev.datets,ev.tstr)..X or Dg..FormatEventShort(ev.datets,ev.tstr)..X))
+        local fTtl=row:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        fTtl:SetPoint("TOPLEFT",row,"TOPLEFT",104,oy); fTtl:SetSize(268,14)
+        fTtl:SetText(signedUp and Gr..(ev.title or "")..X or W..(ev.title or "")..X)
+        local maxDisp=maxS>0 and "/"..maxS or ""
+        local fSig=row:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        fSig:SetPoint("TOPLEFT",row,"TOPLEFT",376,oy); fSig:SetSize(56,14)
+        fSig:SetText(Dg..sigCount..maxDisp..X)
+        local signBtn=CreateFrame("Button",nil,row,"UIPanelButtonTemplate")
+        signBtn:SetSize(100,20); signBtn:SetPoint("RIGHT",row,"RIGHT",-4,0)
+        if isFull then signBtn:SetText(L.CAL_CLOSED); signBtn:Disable()
+        elseif signedUp then
+            signBtn:SetText(L.CAL_LEAVE)
+            signBtn:SetScript("OnClick",function()
+                UnsignEvent(id); RefreshCalendar()
+                print(T.."[GuildMarkt]"..X.." "..L.CAL_LEFT.." "..W..(ev.title or "")..X)
+            end)
+        else
+            signBtn:SetText(L.CAL_SIGNUP)
+            signBtn:SetScript("OnClick",function()
+                SignEvent(id); RefreshCalendar()
+                print(T.."[GuildMarkt]"..X.." "..L.CAL_JOINED.." "..W..(ev.title or "")..X)
+            end)
+        end
+        if ev.creator==me or CanDeleteOthers() then
+            local delBtn=CreateFrame("Button",nil,row,"UIPanelButtonTemplate")
+            delBtn:SetSize(18,18); delBtn:SetPoint("RIGHT",signBtn,"LEFT",-2,0); delBtn:SetText("×")
+            delBtn:SetScript("OnClick",function()
+                DeleteEvent(id); RefreshCalendar()
+                print(T.."[GuildMarkt]"..X.." "..L.CAL_DELETED)
+            end)
+        end
+        row:SetScript("OnClick",function() BuildEventDetailPopup(id) end)
+        row:SetScript("OnEnter",function(self)
+            if isToday then self:SetBackdropBorderColor(0.4,1,0.3,1)
+            else self:SetBackdropBorderColor(0.4,0.8,1,0.8) end
+            GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines()
+            GameTooltip:AddLine(G..(ev.title or "")..X)
+            GameTooltip:AddLine(T..FormatEventDate(ev.datets).." "..ev.tstr..X)
+            if (ev.desc or "")~="" then GameTooltip:AddLine(" "); GameTooltip:AddLine(Dg..ev.desc..X,1,1,1,true) end
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine(Dg..L.CAL_SIGNUPS.." "..X..G..sigCount..maxDisp..X)
+            GameTooltip:AddLine(Dg..L.CAL_CREATOR..X..T..(ev.creator or "")..X)
+            GameTooltip:Show()
+        end)
+        row:SetScript("OnLeave",function(self)
+            if isToday then self:SetBackdropBorderColor(0.2,0.7,0.15,0.9)
+            elseif isFuture then self:SetBackdropBorderColor(0.2,0.2,0.45,0.7)
+            else self:SetBackdropBorderColor(0.15,0.15,0.15,0.5) end
+            GameTooltip:Hide()
+        end)
+        calContent.calRows[#calContent.calRows+1]=row; y=y+CAL_ROW_H
+    end
+    calContent:SetHeight(math.max(y,20))
+    if not calContent.empty then
+        calContent.empty=calContent:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        calContent.empty:SetPoint("CENTER",calContent,"TOP",0,-80); calContent.empty:SetJustifyH("CENTER")
+    end
+    if #evList==0 then calContent.empty:SetText(Dg..L.CAL_NOEVENTS..X); calContent.empty:Show()
+    else calContent.empty:Hide() end
+end
+
+function BuildEventDetailPopup(eventId)
+    local ev=GuildMarketDB.events and GuildMarketDB.events[eventId]; if not ev then return end
+    if eventDetailFrame then eventDetailFrame:Hide(); eventDetailFrame=nil end
+    local f=CreateFrame("Frame","GuildMarketEventDetail",UIParent,"BasicFrameTemplateWithInset")
+    f:SetSize(490,420); f:SetPoint("CENTER",UIParent,"CENTER",80,0)
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
+    f:SetFrameStrata("DIALOG"); f:SetFrameLevel(30)
+    f.TitleBg:SetHeight(28)
+    local titleFS=f:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+    titleFS:SetPoint("CENTER",f.TitleBg,"CENTER",0,2); titleFS:SetText(G..(ev.title or "")..X)
+    local sigCount=0; for _ in pairs(ev.signups or {}) do sigCount=sigCount+1 end
+    local maxDisp=(ev.maxsign or 0)>0 and "/"..ev.maxsign or ""
+    local info=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    info:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-8); info:SetWidth(450); info:SetJustifyH("LEFT")
+    info:SetText(T..FormatEventDate(ev.datets).."  "..ev.tstr..X
+        .."    "..Dg..L.CAL_CREATOR..X..W..(ev.creator or "")..X
+        .."    "..G..sigCount..maxDisp.." "..L.CAL_ATTENDEES..X)
+    local yOff=-26
+    if (ev.desc or "")~="" then
+        local desc=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        desc:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,yOff); desc:SetWidth(450); desc:SetJustifyH("LEFT")
+        desc:SetText(W..ev.desc..X); yOff=yOff-20
+    end
+    local sep=f:CreateTexture(nil,"BACKGROUND"); sep:SetHeight(1)
+    sep:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,yOff-4); sep:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,yOff-4)
+    sep:SetColorTexture(0.3,0.5,0.8,0.7); yOff=yOff-12
+    local lbSig=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    lbSig:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,yOff); lbSig:SetText(G..L.CAL_SIGNUPS..X); yOff=yOff-22
+    local sf2=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+    sf2:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,yOff); sf2:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,36)
+    local sc=CreateFrame("Frame",nil,sf2); sc:SetWidth(430); sc:SetHeight(20); sf2:SetScrollChild(sc)
+    local sorted={}; for name in pairs(ev.signups or {}) do sorted[#sorted+1]=name end
+    table.sort(sorted,function(a,b)
+        local ao=IsOnline(a) and 1 or 0; local bo=IsOnline(b) and 1 or 0
+        if ao~=bo then return ao>bo end; return a<b
+    end)
+    local ry=0
+    for _,name in ipairs(sorted) do
+        local online=IsOnline(name)
+        local rbg=sc:CreateTexture(nil,"BACKGROUND"); rbg:SetHeight(22)
+        rbg:SetPoint("TOPLEFT",sc,"TOPLEFT",0,-ry); rbg:SetPoint("TOPRIGHT",sc,"TOPRIGHT",0,-ry)
+        if (ry/22)%2==0 then rbg:SetColorTexture(0.08,0.08,0.18,0.7) else rbg:SetColorTexture(0.05,0.05,0.12,0.5) end
+        local dot=sc:CreateTexture(nil,"OVERLAY"); dot:SetSize(14,14); dot:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-ry-4)
+        dot:SetTexture(online and "Interface\\FriendsFrame\\StatusIcon-Online" or "Interface\\FriendsFrame\\StatusIcon-Offline")
+        dot:SetVertexColor(1,1,1,online and 1 or 0.35)
+        local lbN=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        lbN:SetPoint("TOPLEFT",sc,"TOPLEFT",22,-ry-4); lbN:SetText(online and W..name..X or Dg..name..X); lbN:SetSize(200,14)
+        if online then
+            local wb=CreateFrame("Button",nil,sc,"UIPanelButtonTemplate"); wb:SetSize(90,18)
+            wb:SetPoint("TOPLEFT",sc,"TOPLEFT",226,-ry-2); wb:SetText(L.INFO_WHISPER)
+            wb:SetScript("OnClick",function() OpenWhisper(name) end)
+        end
+        ry=ry+22; sc:SetHeight(ry)
+    end
+    if #sorted==0 then
+        local hint=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        hint:SetPoint("TOPLEFT",sc,"TOPLEFT",8,-6); hint:SetText(Dg..L.CAL_NOSIGNUP..X); sc:SetHeight(26)
+    end
+    local closeBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); closeBtn:SetSize(100,22)
+    closeBtn:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-8,6); closeBtn:SetText(isDE and "Schliessen" or "Close")
+    closeBtn:SetScript("OnClick",function() f:Hide() end)
+    local me=UnitName("player"); local signedUp=(ev.signups or {})[me]
+    local sigBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); sigBtn:SetSize(110,22)
+    sigBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,6)
+    if signedUp then
+        sigBtn:SetText(L.CAL_LEAVE)
+        sigBtn:SetScript("OnClick",function() UnsignEvent(eventId); RefreshCalendar(); f:Hide() end)
+    else
+        local isFull=(ev.maxsign or 0)>0 and sigCount>=ev.maxsign
+        sigBtn:SetText(isFull and L.CAL_CLOSED or L.CAL_SIGNUP)
+        if isFull then sigBtn:Disable() end
+        sigBtn:SetScript("OnClick",function() SignEvent(eventId); RefreshCalendar(); f:Hide() end)
+    end
+    eventDetailFrame=f; f:Show()
+end
+
+-- ============================================================
 -- Haupt-UI
 -- ============================================================
 local function BuildUI()
@@ -914,12 +1184,18 @@ local function BuildUI()
     tabBg:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-20)
     tabBg:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-20); tabBg:SetHeight(28)
 
-    local function Tab(label,filter,x,w)
+    local ActivateListMode, ActivateCalendarMode  -- forward-declared; defined after all frames are built
+
+    local function Tab(label,filter,x,w,calTab)
         local b=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
         b:SetSize(w or 80,22); b:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",x,-24); b:SetText(label)
-        b:SetScript("OnClick",function() currentFilter=filter; RefreshList() end)
+        b:SetScript("OnClick",function()
+            if calTab then ActivateCalendarMode()
+            else currentFilter=filter; ActivateListMode() end
+        end)
     end
     Tab(L.TAB_ALL,"ALL",8,70); Tab(L.TAB_WTB,"SUCHE",82,70); Tab(L.TAB_WTS,"BIETE",156,70); Tab(L.TAB_SVC,"DIENST",230,70)
+    Tab(L.CAL_TAB,"CALENDAR",308,88,true)
 
     countText=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     countText:SetPoint("LEFT",f.InsetBg,"TOPLEFT",310,-32)
@@ -1212,7 +1488,144 @@ local function BuildUI()
         end
     end)
     UIDropDownMenu_SetSelectedValue(ddType,"BIETE"); UIDropDownMenu_SetText(ddType,L.TYPE_BIETE)
-    ShowSection(postType)  -- initiale Anpassung (setzt itemBg-Höhe + sf/div)
+    ShowSection(postType)
+
+    -- ══════════════════════════════════════════════════════════
+    -- KALENDER-UI (versteckt beim Start)
+    -- ══════════════════════════════════════════════════════════
+
+    -- Kalender-ScrollFrame (gleiche Position wie sf)
+    local calSf=CreateFrame("ScrollFrame","GuildMarketCalScroll",f,"UIPanelScrollFrameTemplate")
+    calSf:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-98)
+    calSf:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-22,288)
+    local calCont=CreateFrame("Frame",nil,calSf); calCont:SetWidth(ROW_W); calCont:SetHeight(20)
+    calSf:SetScrollChild(calCont); calContent=calCont; calSf:Hide()
+
+    -- Kalender-Trennlinie (gleiche Position wie div)
+    local calDiv=f:CreateTexture(nil,"BACKGROUND")
+    calDiv:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,286); calDiv:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,286)
+    calDiv:SetHeight(2); calDiv:SetColorTexture(0.2,0.5,0.3,0.8); calDiv:Hide()
+
+    -- Kalender-Spaltenheader
+    local calHdrBg=f:CreateTexture(nil,"BACKGROUND")
+    calHdrBg:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-80); calHdrBg:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-80)
+    calHdrBg:SetHeight(18); calHdrBg:SetColorTexture(0.08,0.14,0.10,1); calHdrBg:Hide()
+    local calHdrLine=f:CreateTexture(nil,"BACKGROUND")
+    calHdrLine:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-97); calHdrLine:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-97)
+    calHdrLine:SetHeight(1); calHdrLine:SetColorTexture(0.2,0.5,0.3,0.5); calHdrLine:Hide()
+    local function CalHdr(txt,x,w,align)
+        local fs=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        fs:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",x+2,-81); fs:SetSize(w,16)
+        fs:SetJustifyH(align or "LEFT"); fs:SetText(Gr..txt..X); fs:Hide(); return fs
+    end
+    local calHDate=CalHdr(L.CAL_HDR_DATE,4,96); local calHTitle=CalHdr(L.CAL_HDR_TTL,104,268); local calHAtt=CalHdr(L.CAL_HDR_ATT,376,56)
+
+    -- ── Kalender-Formular (gleiche Y-Positionen wie Listing-Formular) ──
+
+    -- calItemBg: y=191, h=95 → Titel-Sektion
+    local calItemBg=MakeBg(f,0.04,0.08,0.06,0.95,0.15,0.35,0.20)
+    calItemBg:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,191)
+    calItemBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,191); calItemBg:SetHeight(95); calItemBg:Hide()
+    local newEvtLbl=calItemBg:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    newEvtLbl:SetPoint("TOPLEFT",calItemBg,"TOPLEFT",8,-8); newEvtLbl:SetText(Gr..L.CAL_NEW..X)
+    local lbCalTitle=calItemBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbCalTitle:SetPoint("TOPLEFT",calItemBg,"TOPLEFT",8,-26); lbCalTitle:SetText(Dg..L.CAL_TITLE..X)
+    local ebCalTitle=CreateFrame("EditBox","GuildMarketCalTitleBox",f,"InputBoxTemplate")
+    ebCalTitle:SetSize(560,22); ebCalTitle:SetPoint("TOPLEFT",calItemBg,"TOPLEFT",56,-38)
+    ebCalTitle:SetAutoFocus(false); ebCalTitle:SetMaxLetters(50); ebCalTitle:Hide()
+
+    -- calPreisBg: y=141, h=50 → Datum + Zeit + Max
+    local calPreisBg=MakeBg(f,0.06,0.08,0.06,0.95,0.20,0.35,0.20)
+    calPreisBg:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,141)
+    calPreisBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,141); calPreisBg:SetHeight(50); calPreisBg:Hide()
+    local lbCalDate=calPreisBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbCalDate:SetPoint("TOPLEFT",calPreisBg,"TOPLEFT",6,-6); lbCalDate:SetText(Dg..L.CAL_DATE..X)
+    local ebCalDate=CreateFrame("EditBox","GuildMarketCalDateBox",f,"InputBoxTemplate")
+    ebCalDate:SetSize(130,22); ebCalDate:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",6,145)
+    ebCalDate:SetAutoFocus(false); ebCalDate:SetMaxLetters(10); ebCalDate:Hide()
+    local lbCalTime=calPreisBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbCalTime:SetPoint("TOPLEFT",calPreisBg,"TOPLEFT",160,-6); lbCalTime:SetText(Dg..L.CAL_TIME..X)
+    local ebCalTime=CreateFrame("EditBox","GuildMarketCalTimeBox",f,"InputBoxTemplate")
+    ebCalTime:SetSize(70,22); ebCalTime:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",240,145)
+    ebCalTime:SetAutoFocus(false); ebCalTime:SetMaxLetters(5); ebCalTime:Hide()
+    local lbCalMax=calPreisBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbCalMax:SetPoint("TOPLEFT",calPreisBg,"TOPLEFT",330,-6); lbCalMax:SetText(Dg..L.CAL_MAX..X)
+    local ebCalMax=CreateFrame("EditBox","GuildMarketCalMaxBox",f,"InputBoxTemplate")
+    ebCalMax:SetSize(60,22); ebCalMax:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",498,145)
+    ebCalMax:SetAutoFocus(false); ebCalMax:SetMaxLetters(3); ebCalMax:SetNumeric(true); ebCalMax:Hide()
+
+    -- calNotizBg: y=101, h=40 → Beschreibung
+    local calNotizBg=MakeBg(f,0.04,0.06,0.04,0.92,0.12,0.28,0.15)
+    calNotizBg:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,101)
+    calNotizBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,101); calNotizBg:SetHeight(40); calNotizBg:Hide()
+    local lbCalDesc=calNotizBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbCalDesc:SetPoint("TOPLEFT",calNotizBg,"TOPLEFT",6,-6); lbCalDesc:SetText(Dg..L.CAL_DESC..X)
+    local ebCalDesc=CreateFrame("EditBox","GuildMarketCalDescBox",f,"InputBoxTemplate")
+    ebCalDesc:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",166,105)
+    ebCalDesc:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-10,105)
+    ebCalDesc:SetHeight(22); ebCalDesc:SetAutoFocus(false); ebCalDesc:SetMaxLetters(60); ebCalDesc:Hide()
+
+    -- "Event erstellen"-Button (y=44)
+    local createEvtBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+    createEvtBtn:SetSize(160,28); createEvtBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,44)
+    createEvtBtn:SetText(L.CAL_CREATE); createEvtBtn:Hide()
+    createEvtBtn:SetScript("OnClick",function()
+        if not CanCreateEvent() then print(R.."[GuildMarkt]"..X.." "..L.CAL_NORANKC); return end
+        local title=ebCalTitle:GetText(); if title=="" then print(R.."[GuildMarkt]"..X.." "..L.CAL_NOTITLE); return end
+        local datets=ParseEventDate(ebCalDate:GetText())
+        if not datets then print(R.."[GuildMarkt]"..X.." "..L.CAL_NODATE); return end
+        if datets<TodayTs() then print(R.."[GuildMarkt]"..X.." "..L.CAL_PAST); return end
+        local tstr=ebCalTime:GetText()
+        if not tstr:match("^%d%d:%d%d$") then print(R.."[GuildMarkt]"..X.." "..L.CAL_NOTIME); return end
+        PostEvent(title,datets,tstr,tonumber(ebCalMax:GetText()) or 0,ebCalDesc:GetText())
+        print(T.."[GuildMarkt]"..X.." "..L.CAL_CREATED.." "..Gr..title..X)
+        ebCalTitle:SetText(""); ebCalDate:SetText(""); ebCalTime:SetText(""); ebCalMax:SetText(""); ebCalDesc:SetText("")
+        RefreshCalendar()
+    end)
+
+    -- ══ Mode-Switching ══════════════════════════════════════════
+
+    ActivateListMode = function()
+        currentMode="LIST"
+        sf:Show(); div:Show()
+        searchBg:Show(); searchIcon:Show(); ebSearch:Show(); clearSearch:Show()
+        notizBg:Show(); ebNote:Show()
+        preisBg:Show(); ebGold:Show(); ebSilber:Show(); ebKupfer:Show(); freeBtn:Show(); ddPType:Show()
+        itemBg:Show(); ddType:Show()
+        postBtn:Show(); clearBtn:Show()
+        hBg:Show(); hLine:Show()
+        for _,fs in pairs(hdrFS) do fs:Show() end
+        -- Kalender ausblenden
+        calSf:Hide(); calDiv:Hide(); calHdrBg:Hide(); calHdrLine:Hide()
+        calHDate:Hide(); calHTitle:Hide(); calHAtt:Hide()
+        calItemBg:Hide(); ebCalTitle:Hide()
+        calPreisBg:Hide(); ebCalDate:Hide(); ebCalTime:Hide(); ebCalMax:Hide()
+        calNotizBg:Hide(); ebCalDesc:Hide()
+        createEvtBtn:Hide()
+        ShowSection(postType); RefreshList()
+    end
+
+    ActivateCalendarMode = function()
+        currentMode="CALENDAR"
+        sf:Hide(); div:Hide()
+        searchBg:Hide(); searchIcon:Hide(); ebSearch:Hide(); clearSearch:Hide()
+        notizBg:Hide(); ebNote:Hide()
+        preisBg:Hide(); ebGold:Hide(); ebSilber:Hide(); ebKupfer:Hide(); freeBtn:Hide(); ddPType:Hide()
+        itemBg:Hide(); ddType:Hide()
+        postBtn:Hide(); clearBtn:Hide()
+        hBg:Hide(); hLine:Hide()
+        for _,fs in pairs(hdrFS) do fs:Hide() end
+        secNormal:Hide(); secDienst:Hide(); sMats:Hide()
+        -- Kalender einblenden
+        calSf:Show(); calDiv:Show(); calHdrBg:Show(); calHdrLine:Show()
+        calHDate:Show(); calHTitle:Show(); calHAtt:Show()
+        calItemBg:Show(); ebCalTitle:Show()
+        calPreisBg:Show(); ebCalDate:Show(); ebCalTime:Show(); ebCalMax:Show()
+        calNotizBg:Show(); ebCalDesc:Show()
+        createEvtBtn:Show()
+        if CanCreateEvent() then createEvtBtn:Enable() else createEvtBtn:Disable() end
+        RefreshCalendar()
+    end
 
     -- ── Post-Button ──────────────────────────────────────────
     postBtn:SetScript("OnClick",function()
@@ -1272,9 +1685,9 @@ local ev=CreateFrame("Frame","GuildMarketEventFrame",UIParent)
 ev:RegisterEvent("PLAYER_LOGIN"); ev:RegisterEvent("CHAT_MSG_ADDON"); ev:RegisterEvent("GUILD_ROSTER_UPDATE")
 ev:SetScript("OnEvent",function(self,event,...)
     if event=="PLAYER_LOGIN" then
-        InitDB(); PruneExpired(); if GuildRoster then GuildRoster() end
+        InitDB(); PruneExpired(); PruneExpiredEvents(); if GuildRoster then GuildRoster() end
         local me=UnitName("player"); if me then addonUsers[me]=true end
-        DelayCall(6,function() BroadcastMine(); RequestSync() end)
+        DelayCall(6,function() BroadcastMine(); RequestSync(); BroadcastEvents(); SendGuild("EVTREQ") end)
         print(T.."[GuildMarkt]"..X.." "..L.MSG_LOADED.." — "..G.."/gmarkt"..X.." | "..Dg..(GetGuildInfo("player") or "")..X)
     elseif event=="GUILD_ROSTER_UPDATE" then
         UpdateRoster(); if mainFrame and mainFrame:IsShown() then RefreshList() end
@@ -1294,6 +1707,40 @@ ev:SetScript("OnEvent",function(self,event,...)
             if id and GuildMarketDB.listings[id] then local sN=sender:match("^([^%-]+)") or sender
                 if GuildMarketDB.listings[id].contact==sN then GuildMarketDB.listings[id]=nil; if mainFrame and mainFrame:IsShown() then RefreshList() end end end; return
         end
+        -- ── Kalender-Protokoll ──────────────────────────────────
+        if msg=="EVTREQ" then BroadcastEvents(); return end
+        if msg:sub(1,9)=="EVTUNSIGN" then
+            local eid=msg:sub(11)
+            if eid and GuildMarketDB.events and GuildMarketDB.events[eid] then
+                GuildMarketDB.events[eid].signups=GuildMarketDB.events[eid].signups or {}
+                GuildMarketDB.events[eid].signups[sn]=nil
+                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+            end; return
+        end
+        if msg:sub(1,7)=="EVTSIGN" then
+            local eid=msg:sub(9)
+            if eid and GuildMarketDB.events and GuildMarketDB.events[eid] then
+                GuildMarketDB.events[eid].signups=GuildMarketDB.events[eid].signups or {}
+                GuildMarketDB.events[eid].signups[sn]=true
+                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+            end; return
+        end
+        if msg:sub(1,7)=="EVTPOST" then
+            local eid,ev2=DeserializeEvent(msg)
+            if eid and ev2 then
+                ev2.creator=sn
+                if GuildMarketDB.events[eid] then ev2.signups=GuildMarketDB.events[eid].signups or {} end
+                GuildMarketDB.events[eid]=ev2
+                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+            end; return
+        end
+        if msg:sub(1,6)=="EVTDEL" then
+            local eid=msg:sub(8)
+            if eid and GuildMarketDB.events and GuildMarketDB.events[eid] then
+                GuildMarketDB.events[eid]=nil
+                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+            end; return
+        end
         local action,id,entry=Deserialize(msg)
         if action=="POST" and id and entry then
             entry.contact=sender:match("^([^%-]+)") or sender
@@ -1309,7 +1756,9 @@ local function Toggle()
     if not mainFrame then BuildUI() end
     if mainFrame:IsShown() then mainFrame:Hide()
     else mainFrame:ClearAllPoints(); mainFrame:SetPoint("CENTER",UIParent,"CENTER",0,0)
-        if GuildRoster then GuildRoster() end; PruneExpired(); RefreshList(); mainFrame:Show()
+        if GuildRoster then GuildRoster() end; PruneExpired(); PruneExpiredEvents()
+        if currentMode=="CALENDAR" then RefreshCalendar() else RefreshList() end
+        mainFrame:Show()
     end
 end
 SLASH_GUILDMARKET1="/gmarkt"; SLASH_GUILDMARKET2="/gildenmarkt"

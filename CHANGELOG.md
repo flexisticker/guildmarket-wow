@@ -5,6 +5,23 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [0.9.9-beta] · 2026-06-27 · Gilden-Kalender mit Event-Anmeldung
+
+### Added
+- **Kalender-Tab** (5. Tab) — Events mit Datum, Uhrzeit, Beschreibung, Max-Teilnehmerzahl
+- Nur Offiziere/GM können Events erstellen (konfigurierbarer `eventRank`, Standard = Rang 1)
+- Alle Gildenmitglieder können sich an- und abmelden (Anmelden/Abmelden-Button pro Zeile)
+- Events werden peer-to-peer via `EVTPOST|`, `EVTDEL|`, `EVTSIGN|`, `EVTUNSIGN|`, `EVTREQ` synchronisiert
+- **Event-Detail-Popup**: Teilnehmerliste mit Online-Dots, Flüstern-Buttons, Anmelden/Abmelden
+- Events automatisch bereinigt wenn älter als 24h nach Eventdatum (`PruneExpiredEvents`)
+- Login-Sync: beim Einloggen werden eigene Events und Anmeldungen automatisch gesendet + `EVTREQ` zum Nachladen fremder Events
+- `CFG_EVTRANK`-Option im Config-Frame (GM kann Event-Erstell-Rang konfigurieren)
+
+### Fixed
+- Config-Frame auf 290px Höhe vergrößert (Platz für 3. Rang-Dropdown)
+
+---
+
 ## [0.9.8-beta] · 2026-06-27 · Lokalisierung (DE/EN), Responsives Formular
 
 ### Added
