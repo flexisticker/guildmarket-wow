@@ -364,7 +364,7 @@ local function InitDB()
     if not GuildMarketDB          then GuildMarketDB={} end
     if not GuildMarketDB.listings then GuildMarketDB.listings={} end
     if not GuildMarketDB.events   then GuildMarketDB.events={} end
-    if not GuildMarketDB.config   then GuildMarketDB.config={postRank=9,deleteRank=1,eventRank=9} end
+    if not GuildMarketDB.config   then GuildMarketDB.config={postRank=9,deleteRank=9,eventRank=9} end
     if not GuildMarketDB.config.eventRank then GuildMarketDB.config.eventRank=9 end
 end
 local function PruneExpired()
