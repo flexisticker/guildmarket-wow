@@ -266,15 +266,17 @@ local function RefreshList()
             row.fContact = FS(COL.contact.x, COL.contact.w)
             row.fExp     = FS(COL.expiry.x,  COL.expiry.w,  "RIGHT")
 
-            -- Online-Indikator (klickbar)
+            -- Online-Indikator (klickbar) — WoW FriendsFrame Textur
             local onlineBtn = CreateFrame("Button", nil, row)
             onlineBtn:SetSize(20, ROW_H)
             onlineBtn:SetPoint("LEFT", row, "LEFT", COL.online.x, 0)
-            local onlineText = onlineBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            onlineText:SetAllPoints()
-            onlineText:SetJustifyH("CENTER")
-            row.onlineBtn  = onlineBtn
-            row.onlineText = onlineText
+            -- Dot-Textur (14x14 zentriert in der Zelle)
+            local dotTex = onlineBtn:CreateTexture(nil, "OVERLAY")
+            dotTex:SetSize(14, 14)
+            dotTex:SetPoint("CENTER", onlineBtn, "CENTER", 0, 0)
+            dotTex:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online")
+            row.onlineBtn = onlineBtn
+            row.dotTex    = dotTex
 
             -- Delete-Button
             local del = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
@@ -316,9 +318,10 @@ local function RefreshList()
         row.fContact:SetText(T..(e.contact or "")..X)
         row.fExp:SetText(FormatExpiry(e.expires))
 
-        -- Online-Punkt
+        -- Online-Indikator via WoW-Textur
         if online then
-            row.onlineText:SetText("|cff00ff44●|r")
+            row.dotTex:SetTexture("Interface\\FriendsFrame\\StatusIcon-Online")
+            row.dotTex:SetVertexColor(1, 1, 1, 1)
             row.onlineBtn:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:ClearLines()
@@ -327,11 +330,10 @@ local function RefreshList()
                 GameTooltip:Show()
             end)
             row.onlineBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-            row.onlineBtn:SetScript("OnClick", function()
-                OpenWhisper(e.contact)
-            end)
+            row.onlineBtn:SetScript("OnClick", function() OpenWhisper(e.contact) end)
         else
-            row.onlineText:SetText(Dg.."○"..X)
+            row.dotTex:SetTexture("Interface\\FriendsFrame\\StatusIcon-Offline")
+            row.dotTex:SetVertexColor(1, 1, 1, 0.45)
             row.onlineBtn:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 GameTooltip:ClearLines()
@@ -417,10 +419,10 @@ end)
     f:Hide()
 
     -- Titel
-    f.TitleBg:SetHeight(30)
-    local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    title:SetPoint("LEFT", f.TitleBg, "LEFT", 8, 0)
-    title:SetText(G.."Gildenmarkt"..X.." — "..T..guildName..X)
+    f.TitleBg:SetHeight(28)
+    local title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+    title:SetPoint("CENTER", f.TitleBg, "CENTER", 0, 2)
+    title:SetText(G.."Gildenmarkt"..X.."  "..T..guildName..X)
 
     local sub = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     sub:SetPoint("TOPLEFT", f.InsetBg, "TOPLEFT", 8, -5)
@@ -456,7 +458,7 @@ end)
     local syncBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     syncBtn:SetSize(100, 22)
     syncBtn:SetPoint("TOPRIGHT", f.InsetBg, "TOPRIGHT", -4, -22)
-    syncBtn:SetText("↻  Sync")
+    syncBtn:SetText("Sync")
     syncBtn:SetScript("OnClick", function()
         if GuildRoster then GuildRoster() end
         RequestSync()
@@ -484,7 +486,7 @@ end)
     Hdr("Item",    COL.item)
     Hdr("Menge",   COL.amount,  "CENTER")
     Hdr("Kontakt", COL.contact)
-    Hdr("●",       COL.online,  "CENTER")
+    Hdr("Online",  COL.online,  "CENTER")
     Hdr("Rest",    COL.expiry,  "RIGHT")
 
     -- ScrollFrame
@@ -608,7 +610,7 @@ end)
     -- Footer
     local ft = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     ft:SetPoint("BOTTOM", f.InsetBg, "BOTTOM", 0, 34)
-    ft:SetText(Dg.."Eintraege laufen nach 7 Tagen ab  •  Klick auf ● zum Fluestern"..X)
+    ft:SetText(Dg.."Eintraege laufen nach 7 Tagen ab  •  Status-Icon anklicken zum Fluestern"..X)
     local ft2 = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     ft2:SetPoint("BOTTOM", f.InsetBg, "BOTTOM", 0, 20)
     ft2:SetText("|cff3a3a4aGuildMarket — "..guildName.."  •  by MichaModus|r")
