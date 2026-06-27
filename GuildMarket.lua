@@ -455,7 +455,7 @@ local function BuildUI()
     syncBtn:SetPoint("TOPRIGHT", f.InsetBg, "TOPRIGHT", -4, -22)
     syncBtn:SetText("↻  Sync")
     syncBtn:SetScript("OnClick", function()
-        GuildRoster()
+        if GuildRoster then GuildRoster() end
         RequestSync()
         print(T.."[GuildMarkt]"..X.." Sync angefordert...")
     end)
@@ -649,7 +649,7 @@ ev:RegisterEvent("GUILD_ROSTER_UPDATE")
 ev:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         InitDB(); PruneExpired()
-        GuildRoster()
+        if GuildRoster then GuildRoster() end
         DelayCall(6, function() BroadcastMine(); RequestSync() end)
         local guild = GetGuildInfo("player") or "Gilde"
         print(T.."[GuildMarkt]"..X.." Geladen — "..G.."/gmarkt"..X.." | "..Dg..guild..X)
@@ -698,7 +698,7 @@ local function Toggle()
     else
         mainFrame:ClearAllPoints()
         mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-        GuildRoster()
+        if GuildRoster then GuildRoster() end
         PruneExpired(); RefreshList(); mainFrame:Show()
     end
 end
