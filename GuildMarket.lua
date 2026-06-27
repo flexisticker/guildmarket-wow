@@ -24,8 +24,52 @@ local ROW_W = 548
 local BERUFE = {
     "Alchemie","Angeln","Bergbau","Erste Hilfe","Farmservice",
     "Ingenieurskunst","Juwelenschleifen","Kochkunst",
-    "Kraeuterkunde","Kuerscbnerei","Lederverarbeitung",
-    "Schneiderei","Schmiedekunst","Verzauberkunst",
+    "Kraeuterkunde","Kuerschnerei","Lederverarbeitung",
+    "Schneiderei","Schmiedekunst","Verzauberkunst","Ziehdienst",
+}
+
+-- { name, minCarryLevel } — Spieler muss >= dieses Level sein um den Dungeon sinnvoll zu ziehen
+local DUNGEONS = {
+    -- Classic
+    { "Wunsch-Dungeon",          1  },  -- immer als erste Option
+    { "Totenwacht (RFC)",        20 },
+    { "Tiefklingen-Wacht",       22 },
+    { "Totenminen",              22 },
+    { "Burg Shadowfang",         26 },
+    { "Die Schmiede",            26 },
+    { "Gnomeregan",              30 },
+    { "SM: Bibliothek",          36 },
+    { "SM: Grabmal",             38 },
+    { "SM: Waffenkammer",        40 },
+    { "SM: Kathedrale",          42 },
+    { "Razorfen Kraul",          38 },
+    { "Razorfen Downs",          44 },
+    { "Uldaman",                 46 },
+    { "Zul'Farrak",              50 },
+    { "Maraudon",                52 },
+    { "Versunkener Tempel",      55 },
+    { "Blackrock Tiefen",        58 },
+    { "Untere Schwarzfelsspitze",58 },
+    { "Obere Schwarzfelsspitze", 58 },
+    { "Duesterbuch",             58 },
+    { "Scholomanz",              58 },
+    { "Stratholme",              58 },
+    -- TBC
+    { "Hoellenfeuerfestung",     62 },
+    { "Blutkessel",              62 },
+    { "Sklavenpferche",          62 },
+    { "Unterholz",               63 },
+    { "Manatumuli",              64 },
+    { "Auchenai Krypten",        64 },
+    { "Sethekk-Hallen",          65 },
+    { "Schattenlabyrinth",       68 },
+    { "Zerschmetterte Hallen",   68 },
+    { "Dampfkammern",            68 },
+    { "Die Botanica",            68 },
+    { "Die Arcatraz",            68 },
+    { "Altes Hillsbrad",         66 },
+    { "Der schwarze Morast",     68 },
+    { "Magisterterasse",         68 },
 }
 
 -- Berufs-Icons (Spell-Texture Pfade, TBC Classic)
@@ -201,6 +245,7 @@ local addonUsers={}
 local secNormal,secDienst
 local currentFilter="ALL"; local searchText=""
 local postType="BIETE"; local postPriceType="VHB"; local postFree=false; local postBeruf=BERUFE[1]
+local postDungeon="Wunsch-Dungeon"
 rows={}
 
 -- ============================================================
@@ -922,22 +967,56 @@ local function BuildUI()
     -- button bei sD x=120 → frame x=120-14=106
     ddBeruf:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",106,19)
     UIDropDownMenu_SetWidth(ddBeruf,130)  -- button ≈ 156px → endet bei x=276
-    UIDropDownMenu_Initialize(ddBeruf,function(_,level)
-        for _,b in ipairs(BERUFE) do
-            local info=UIDropDownMenu_CreateInfo(); info.text=b; info.value=b; info.checked=(postBeruf==b)
-            info.func=function(btn) postBeruf=btn.value; UIDropDownMenu_SetSelectedValue(ddBeruf,btn.value); UIDropDownMenu_SetText(ddBeruf,btn.value) end
-            UIDropDownMenu_AddButton(info,level)
-        end
-    end)
-    UIDropDownMenu_SetSelectedValue(ddBeruf,BERUFE[1]); UIDropDownMenu_SetText(ddBeruf,BERUFE[1])
-
     local lbL=sD:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     lbL:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",286,44); lbL:SetText(Dg.."Leistung / Bezeichnung:"..X)
+
     local ebLeist=CreateFrame("EditBox","GuildMarketLeistBox",sD,"InputBoxTemplate")
     ebLeist:SetSize(352,22); ebLeist:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",286,20)
     ebLeist:SetAutoFocus(false); ebLeist:SetMaxLetters(40); ebLeist.itemLink=nil
     ebLeist:SetScript("OnReceiveDrag",function(self) local n,l=GetDraggedItem(); if n then self:SetText(n); self.itemLink=l; ClearCursor() end end)
     ebLeist:SetScript("OnMouseDown",  function(self) local n,l=GetDraggedItem(); if n then self:SetText(n); self.itemLink=l; ClearCursor() end end)
+
+    -- Dungeon-Dropdown (nur bei Ziehdienst sichtbar)
+    local ddDungeon=CreateFrame("Frame","GuildMarketDDDungeon",sD,"UIDropDownMenuTemplate")
+    ddDungeon:SetPoint("BOTTOMLEFT",sD,"BOTTOMLEFT",272,17)
+    UIDropDownMenu_SetWidth(ddDungeon,326)  -- button ≈ 352px, passt auf ebLeist-Breite
+    ddDungeon:Hide()
+
+    local function RefreshDungeonDD()
+        local plvl=UnitLevel("player") or 70
+        UIDropDownMenu_Initialize(ddDungeon,function(_,level)
+            for _,d in ipairs(DUNGEONS) do
+                if plvl>=d[2] then
+                    local info=UIDropDownMenu_CreateInfo(); info.text=d[1]; info.value=d[1]
+                    info.checked=(postDungeon==d[1])
+                    info.func=function(btn) postDungeon=btn.value; UIDropDownMenu_SetSelectedValue(ddDungeon,btn.value); UIDropDownMenu_SetText(ddDungeon,btn.value) end
+                    UIDropDownMenu_AddButton(info,level)
+                end
+            end
+        end)
+        UIDropDownMenu_SetSelectedValue(ddDungeon,postDungeon); UIDropDownMenu_SetText(ddDungeon,postDungeon)
+    end
+
+    local function UpdateDienstFields()
+        if postBeruf=="Ziehdienst" then
+            ebLeist:Hide(); ddDungeon:Show(); lbL:SetText(Dg.."Dungeon:"..X)
+            RefreshDungeonDD()
+        else
+            ddDungeon:Hide(); ebLeist:Show(); lbL:SetText(Dg.."Leistung / Bezeichnung:"..X)
+        end
+    end
+
+    UIDropDownMenu_Initialize(ddBeruf,function(_,level)
+        for _,b in ipairs(BERUFE) do
+            local info=UIDropDownMenu_CreateInfo(); info.text=b; info.value=b; info.checked=(postBeruf==b)
+            info.func=function(btn)
+                postBeruf=btn.value; UIDropDownMenu_SetSelectedValue(ddBeruf,btn.value); UIDropDownMenu_SetText(ddBeruf,btn.value)
+                UpdateDienstFields()
+            end
+            UIDropDownMenu_AddButton(info,level)
+        end
+    end)
+    UIDropDownMenu_SetSelectedValue(ddBeruf,BERUFE[1]); UIDropDownMenu_SetText(ddBeruf,BERUFE[1])
 
     -- Zeile 2 Mats (eigener Frame bei y=168)
     local sMats=CreateFrame("Frame",nil,f)
@@ -973,8 +1052,13 @@ local function BuildUI()
         if not CanPost() then print(R.."[GuildMarkt]"..X.." Kein Zugriff."); return end
         local name,link,beruf,mats,amount
         if postType=="DIENST" then
-            name=ebLeist:GetText(); link=ebLeist.itemLink; beruf=postBeruf; mats=ebMats:GetText(); amount=0
-            if name=="" then print(R.."[GuildMarkt]"..X.." Bitte Leistung eingeben."); return end
+            if postBeruf=="Ziehdienst" then
+                name=postDungeon; link=nil; beruf=postBeruf; mats=ebMats:GetText(); amount=0
+                if not name or name=="" then print(R.."[GuildMarkt]"..X.." Bitte Dungeon auswaehlen."); return end
+            else
+                name=ebLeist:GetText(); link=ebLeist.itemLink; beruf=postBeruf; mats=ebMats:GetText(); amount=0
+                if name=="" then print(R.."[GuildMarkt]"..X.." Bitte Leistung eingeben."); return end
+            end
         else
             name=ebItem:GetText(); link=ebItem.itemLink; beruf=""; mats=""
             amount=tonumber(ebAmt:GetText()) or 0
@@ -983,6 +1067,7 @@ local function BuildUI()
         local pg=ebGold:GetText(); local ps=ebSilber:GetText(); local pk=ebKupfer:GetText()
         PostListing(postType,name,amount,ebNote:GetText(),link,pg,ps,pk,postFree and "1" or "0",postPriceType,beruf,mats)
         ebItem:SetText(""); ebItem.itemLink=nil; ebLeist:SetText(""); ebLeist.itemLink=nil
+        postDungeon="Wunsch-Dungeon"
         ebGold:SetText(""); ebSilber:SetText(""); ebKupfer:SetText("")
         ebAmt:SetText(""); ebNote:SetText(""); ebMats:SetText("")
         postFree=false; freeBtn:SetText("Free: Nein"); ebGold:Enable(); ebSilber:Enable(); ebKupfer:Enable()
