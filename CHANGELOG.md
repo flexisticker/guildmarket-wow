@@ -5,6 +5,32 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [0.9.11-beta] · 2026-07-02 · Monatskalender, Rollen-Signup, DKP-System, Loot-Auktion
+
+### Added
+- **Monatskalender-Grid** statt Agenda-Liste: 7×6-Raster mit Monats-Navigation (◄/►), Heute-Button, Event-Vorschau pro Tag (max. 2 + „+N"-Badge), Klick auf leeren Tag füllt das Datumsfeld vor
+- **Rollen-Signup**: Anmeldung mit Rolle (Tank/Heiler/DPS) + Klassenwahl; Plätze pro Rolle beim Erstellen konfigurierbar (0 = unbegrenzt)
+- **Ersatzbank**: Ist eine Rolle voll, landen weitere Anmeldungen automatisch auf der Ersatzbank (deterministisch nach Anmeldezeit) und rücken nach, wenn jemand abspringt
+- **Rollenwechsel**: Angemeldete können Rolle/Klasse jederzeit ändern, solange die Zielrolle frei ist; reiner Klassenwechsel behält die Warteschlangen-Position
+- **Zwei Event-Typen**: Dungeon-Event (ohne Punkte) und Gilden-Event (rang-beschränkt, Punkte pro Event beim Erstellen festlegbar, golden im Kalender)
+- **Dungeon-Auswahl** beim Event-Erstellen (Dropdown aus der Instanzliste)
+- **Anwesenheits-Bestätigung**: Event-Leiter/berechtigter Rang bestätigt Teilnehmer per „+P"-Button; grünes Häkchen, Doppel-Gutschrift ausgeschlossen
+- **DKP-Punktekonto**: `dkp[player]={bal,ts}` mit Last-Writer-Wins-Sync (DKPSYNC/DKPREQ), Punkte-Rangliste („Punkte"-Button im Kalender), Login-Abgleich
+- **Loot-Auktion (EQdkp-Stil)**: eigenes Loot-Fenster (Button im Hauptframe); Item per Drag&Drop, Mindestgebot + Laufzeit; Gebote ≤ eigener Punktestand; Höchstgebot gewinnt, Punkte werden abgezogen; Auto-Abschluss per Ticker auch bei geschlossenem Fenster; 24h-Historie
+- **Event löschen**: roter Löschen-Button im Detail-Popup (Ersteller + konfigurierbarer Rang)
+- **Rechte-System erweitert**: 7 konfigurierbare Ränge (Posten, Löschen, Event erstellen/löschen, Bestätigen, Gilden-Event, Auktion) + „Rechte ändern ab" (delegierbar, GM immer berechtigt, nur GM stellbar); Config-Fenster zweispaltig
+- **Config-Sync abgesichert**: CFG-Nachrichten werden nur von laut Roster berechtigten Absendern akzeptiert
+
+### Changed
+- Alle Rechte-Defaults auf Rang 9 („jeder"); einmalige Migration bestehender Installationen
+- Event-Protokoll erweitert: `EVTPOST` mit Rollen-Slots/Dungeon/Typ/Punkten, `EVTSIGN` mit Rolle/Klasse/Timestamp, neu `EVTCONF`, `AUCPOST/AUCBID/AUCEND/AUCDEL/AUCREQ`, `DKPSYNC/DKPREQ`
+- CurseForge-Beschreibungen (DE/EN) komplett überarbeitet
+
+### Fixed
+- Lua-5.1-Upvalue-Limit (max. 60) in BuildUI überschritten → 15 Hilfsfunktionen als `GM_`-Globals ausgelagert
+
+---
+
 ## [0.9.10-beta] · 2026-06-27 · Invite-Button, offene Standardrechte
 
 ### Added
