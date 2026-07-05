@@ -1,6 +1,6 @@
-# GuildMarket — Marktplatz, Gilden-Kalender & DKP
+# GuildMarket — Marktplatz, Gilden-Kalender, DKP & Merch-Shop
 
-**GuildMarket** ist die Komplett-Lösung für das Gildenleben in WoW TBC Classic Anniversary und Classic Era: gildeninterner Marktplatz, Event-Kalender mit Rollen-Anmeldung und ein vollwertiges DKP-Punktesystem mit Loot-Auktionen — ganz ohne externen Server, alles peer-to-peer via Gildenchat.
+**GuildMarket** ist die Komplett-Lösung für das Gildenleben in WoW TBC Classic Anniversary und Classic Era: gildeninterner Marktplatz, Event-Kalender für Dungeons und Raids mit Rollen-Anmeldung, ein vollwertiges DKP-Punktesystem mit Loot-Auktionen und ein Merch-Shop, in dem Mitglieder ihre Punkte ausgeben — ganz ohne externen Server, alles peer-to-peer via Gildenchat.
 
 ---
 
@@ -10,50 +10,53 @@
 - **Echtzeit-Sync** über das Gildennetz — alle Mitglieder sehen sofort neue Einträge
 - **Preistypen**: Festpreis (Gold/Silber/Kupfer), Verhandlungsbasis (VHB), kostenlos
 - **DIENST-Modus**: Berufe (Schmiedekunst, Alchemie, Verzauberung …) mit optionalen Materiallisten
-- **Ziehdienst**: spezieller Beruf mit Dungeon-Dropdown (35 Dungeons, Classic + TBC, level-gefiltert)
+- **Ziehdienst**: spezieller Beruf mit Dungeon-Dropdown (38 Dungeons, level- und fraktionsgefiltert)
 - **Online-Indikator** pro Eintrag — ein Klick öffnet das Flüster-Fenster
-- **Suchleiste** filtert nach Item-Name, Beruf, Kontakt
+- **Suchleiste** filtert nach Item-Name, Dungeon, Beruf, Kontakt
 
-## 📅 Gilden-Kalender
+## 📅 Gilden-Kalender — Dungeons & Raids
 
 - **Echter Monatskalender** mit Navigation, Heute-Button und Event-Vorschau pro Tag
-- **Zwei Event-Typen**: Dungeon-Events (jeder mit Recht) und Gilden-Events (rang-beschränkt, vergeben Punkte)
+- **Dungeon- UND Raid-Events**: Auswahl aus 38 Dungeons oder 16 Raids (Karazhan bis Sonnenbrunnen plus alle Classic-Raids)
+- **Raid-Vorlagen**: Bei Raid-Auswahl werden die Rollen-Plätze automatisch passend zur Raid-Größe vorbefüllt (10er → 2/3/5, 25er → 3/6/16, 40er → 4/10/26)
+- **Fraktions-Erkennung**: Das Addon erkennt deine Fraktion und zeigt nur die Instanzen, die für dich zugänglich sind
 - **Rollen-Anmeldung**: Tank / Heiler / DPS mit Klassenwahl — Plätze pro Rolle konfigurierbar
 - **Ersatzbank**: Ist eine Rolle voll, landen weitere Anmeldungen automatisch auf der Ersatzbank und rücken nach, wenn jemand abspringt
-- **Rollenwechsel** jederzeit möglich, solange Plätze frei sind
-- **Dungeon-Auswahl** aus der Instanzliste direkt bei der Event-Erstellung
+- **Gildenchat-Ankündigung**: Optionaler Haken postet neue Events in den Gildenchat, plus automatische Erinnerung ca. 1 Stunde vor Beginn
+- **Login-Erinnerung** listet die heutigen Events im Chat
 - **„Alle einladen"**: Event-Leiter lädt alle Angemeldeten mit einem Klick in die Gruppe
 
 ## 💰 DKP & Loot-Auktion (EQdkp-Stil)
 
-- **Teilnahme-Bestätigung**: Event-Leiter/Offiziere bestätigen nach dem Event, wer dabei war — bestätigte Teilnehmer erhalten die beim Event festgelegten Punkte
-- **Punktekonto**: Rangliste aller Mitglieder, automatischer Abgleich beim Login
-- **Loot-Auktionen**: Item per Drag&Drop einstellen, Mindestgebot + Laufzeit festlegen
-- **Bieten mit Punkten**: Gebot darf den eigenen Punktestand nicht übersteigen — Höchstgebot gewinnt, Punkte werden automatisch abgezogen
-- **Auto-Abschluss** nach Ablauf der Zeit, Ergebnis-Ankündigung an alle
+- **Zwei Event-Typen**: Dungeon-Events (ohne Punkte) und Gilden-Events (rang-beschränkt, Punkte pro Event beim Erstellen festlegbar)
+- **Teilnahme-Bestätigung**: Event-Leiter/Offiziere bestätigen nach dem Event, wer dabei war — bestätigte Teilnehmer erhalten die Punkte
+- **Punktekonto**: durchsuch- und filterbare Rangliste aller Mitglieder (auch für große Gilden), manuelle +/− Anpassung hinter konfigurierbarem Rang
+- **Loot-Auktionen**: Item per Drag&Drop einstellen, Mindestgebot + Laufzeit festlegen — das Gebot kann den eigenen Punktestand nie übersteigen; Höchstgebot gewinnt, Punkte werden automatisch abgezogen, Auktionen schließen von selbst
+
+## 🛍️ Merch-Shop
+
+- **Gilden-Merch und Leistungen gegen Punkte verkaufen**: Artikel anlegen (Freitext oder Item-Link) mit Preis und Bestand
+- **Käufe werden im Gildenchat angekündigt** — mit einem zufälligen Spaß-Spruch
+- **Bestell-Verwaltung**: Verkäufer und Gildenleitung sehen offene Käufe als Highlight am Shop-Button, mit Online-Status, Flüstern-Button und Übergabe-Bestätigung pro Bestellung
 
 ## ⚙️ Rechte-System
 
-- **Alle Rechte einzeln konfigurierbar**: Posten, Löschen, Event erstellen/löschen, Teilnahme bestätigen, Gilden-Events, Auktionen
+- **Zehn einzeln konfigurierbare Rechte**: Posten, Löschen, Event erstellen/löschen, Teilnahme bestätigen, Gilden-Events, Auktionen, Punkte anpassen, Merch, Einstellungs-Zugriff
 - **Standard: jeder darf alles** — der Gildenmeister schränkt bei Bedarf per Rang ein
-- **Delegierbar**: GM kann einen Rang bestimmen, der ebenfalls Einstellungen ändern darf (der GM behält immer alle Rechte)
-- **Abgesichert**: Einstellungs-Sync wird nur von berechtigten Absendern akzeptiert
+- **Der Gildenmeister behält immer alle Rechte** und kann den Einstellungs-Zugriff an einen Rang seiner Wahl delegieren
+- **Abgesichert**: Rechte-relevante Nachrichten werden empfangsseitig gegen das Gilden-Roster geprüft
 
 ## 🌍 Sonstiges
 
-- **Lokalisierung**: Deutsch bei deutschem Client, sonst Englisch
+- **Minimap-Button**: Linksklick öffnet den Marktplatz, Rechtsklick den Kalender
+- **Lokalisierung**: Deutsch bei deutschem Client, sonst Englisch — Instanznamen werden sprachneutral übertragen, gemischte DE/EN-Gilden sehen jeweils ihre eigene Sprache
 - **Addon-Nutzer-Zähler** zeigt live, wie viele Gildenmitglieder das Addon installiert haben
-- **Tabs**: Alle / Biete / Suche / Dienst / Kalender
 
 ---
 
 ## Befehle
 
-`
-/gmarkt        — Marktplatz öffnen/schließen
-`
-
----
+`/gmarkt` — Marktplatz öffnen/schließen
 
 ## Kompatibilität
 
@@ -62,14 +65,12 @@
 | TBC Classic Anniversary | 20505 |
 | Classic Era | 11508 |
 
----
-
 ## Hinweise
 
-- Nur Gildenmitglieder mit dem Addon können Einträge, Events und Punkte empfangen
+- Nur Gildenmitglieder mit dem Addon können Einträge, Events, Punkte und Shop-Artikel empfangen
 - Kein Server, kein Datenbankzugriff — 100% Addon-Kommunikation
 - Markt-Einträge verfallen automatisch nach 7 Tagen, Events 24h nach dem Termin
-- Beta: Feedback & Bug-Reports willkommen!
+- Alpha/Beta: Feedback & Bug-Reports willkommen!
 
 ---
 
