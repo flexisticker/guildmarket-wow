@@ -155,6 +155,41 @@ local L = {
     AUC_NOWINNER = isDE and "Auktion beendet ohne Gebote:" or "Auction ended without bids:",
     AUC_SELLER   = isDE and "Von:"              or "By:",
     AUC_YOURBID  = isDE and "Dein Gebot"        or "Your bid",
+    REMIND_TODAY = isDE and "Heute:"            or "Today:",
+    REMIND_SIGNED= isDE and "(angemeldet)"      or "(signed up)",
+    DKP_ADJ      = isDE and "Anpassung:"        or "Adjust:",
+    DKP_ADJUSTED = isDE and "Punkte angepasst:" or "Points adjusted:",
+    MM_LEFT      = isDE and "Links: Marktplatz oeffnen"  or "Left: open marketplace",
+    MM_RIGHT     = isDE and "Rechts: Kalender oeffnen"   or "Right: open calendar",
+    CFG_DKPADJRANK = isDE and "Punkte anpassen ab:"   or "Adjust points rank:",
+    CFG_MERCHRANK  = isDE and "Merch anlegen ab:"     or "Create merch rank:",
+    DKP_SEARCH   = isDE and "Suchen..."               or "Search...",
+    DKP_ONLINE   = isDE and "Nur Online"              or "Online only",
+    MSH_TITLE    = isDE and "Merch-Shop"              or "Merch Shop",
+    MSH_ITEM     = isDE and "Artikel (Name/Item):"    or "Item (name/drag):",
+    MSH_PRICE    = isDE and "Preis (Punkte):"         or "Price (points):",
+    MSH_STOCK    = isDE and "Anzahl (0=unbegrenzt):"  or "Stock (0=unlimited):",
+    MSH_CREATE   = isDE and "Anlegen"                 or "Create",
+    MSH_BUY      = isDE and "Kaufen"                  or "Buy",
+    MSH_SOLDOUT  = isDE and "Ausverkauft"             or "Sold out",
+    MSH_EMPTY    = isDE and "Keine Artikel im Shop."  or "No items in the shop.",
+    MSH_NOITEM   = isDE and "Bitte Artikel eingeben." or "Please enter an item.",
+    MSH_NOPRICE  = isDE and "Bitte Preis angeben."    or "Please enter a price.",
+    MSH_NOPOINTS = isDE and "Nicht genug Punkte."     or "Not enough points.",
+    MSH_NORANK   = isDE and "Kein Zugriff — Rang zu niedrig fuer den Merch-Shop." or "No access — rank too low for the merch shop.",
+    MSH_CREATED  = isDE and "Artikel angelegt:"       or "Item created:",
+    MSH_BOUGHT   = isDE and "kauft"                   or "buys",
+    MSH_FROM     = isDE and "von"                     or "from",
+    MSH_STOCKLBL = isDE and "Bestand:"                or "Stock:",
+    MSH_ORDERS   = isDE and "Offene Kaeufe"           or "Pending purchases",
+    MSH_CONFIRM  = isDE and "Uebergeben"              or "Delivered",
+    MSH_CONFIRMED= isDE and "Kauf bestaetigt:"        or "Purchase confirmed:",
+    MSH_PENDING  = isDE and "wartet auf Uebergabe"    or "awaiting delivery",
+    CAL_ANNOUNCE = isDE and "Im Gildenchat ankuendigen" or "Announce in guild chat",
+    CAL_CHAT_NEW = isDE and "Neues Event: '%s' am %s um %s%s — Anmeldung im Gildenmarkt (/gmarkt)!"
+                        or  "New event: '%s' on %s at %s%s — sign up in the guild market (/gmarkt)!",
+    CAL_CHAT_REM = isDE and "Erinnerung: '%s' startet um %s (in ca. 1 Stunde)! Anmeldungen: %d — jetzt noch eintragen: /gmarkt"
+                        or  "Reminder: '%s' starts at %s (in about 1 hour)! Signups: %d — join now: /gmarkt",
     ETYPE_DUNGEON= isDE and "Dungeon-Event"     or "Dungeon Event",
     ETYPE_GUILD  = isDE and "Gilden-Event"      or "Guild Event",
     CAL_POINTS   = isDE and "Punkte:"           or "Points:",
@@ -193,85 +228,149 @@ local BERUFE = isDE and {
 }
 
 -- { name, minCarryLevel }
+-- { Name, Mindestlevel, Fraktion } — Fraktion: "A"=nur Allianz, "H"=nur Horde, nil=beide
 local DUNGEONS = isDE and {
-    { "Wunsch-Dungeon",          1  },
-    { "Totenwacht (RFC)",        20 },
-    { "Tiefklingen-Wacht",       22 },
-    { "Totenminen",              22 },
-    { "Burg Shadowfang",         26 },
-    { "Die Schmiede",            26 },
-    { "Gnomeregan",              30 },
-    { "SM: Bibliothek",          36 },
-    { "SM: Grabmal",             38 },
-    { "SM: Waffenkammer",        40 },
-    { "SM: Kathedrale",          42 },
-    { "Razorfen Kraul",          38 },
-    { "Razorfen Downs",          44 },
-    { "Uldaman",                 46 },
-    { "Zul'Farrak",              50 },
-    { "Maraudon",                52 },
-    { "Versunkener Tempel",      55 },
-    { "Blackrock Tiefen",        58 },
-    { "Untere Schwarzfelsspitze",58 },
-    { "Obere Schwarzfelsspitze", 58 },
-    { "Duesterbuch",             58 },
-    { "Scholomanz",              58 },
-    { "Stratholme",              58 },
-    { "Hoellenfeuerfestung",     62 },
-    { "Blutkessel",              62 },
-    { "Sklavenpferche",          62 },
-    { "Unterholz",               63 },
-    { "Manatumuli",              64 },
-    { "Auchenai Krypten",        64 },
-    { "Sethekk-Hallen",          65 },
-    { "Schattenlabyrinth",       68 },
-    { "Zerschmetterte Hallen",   68 },
-    { "Dampfkammern",            68 },
-    { "Die Botanica",            68 },
-    { "Die Arcatraz",            68 },
-    { "Altes Hillsbrad",         66 },
-    { "Der schwarze Morast",     68 },
-    { "Magisterterasse",         68 },
+    { "Wunsch-Dungeon",             1  },
+    { "Der Flammenschlund",         13, "H" },
+    { "Die Hoehlen des Wehklagens", 15 },
+    { "Die Todesminen",             15 },
+    { "Burg Schattenfang",          18 },
+    { "Das Verlies",                22, "A" },
+    { "Tiefschwarze Grotte",        20 },
+    { "Der Kral von Razorfen",      25 },
+    { "Gnomeregan",                 24 },
+    { "SM: Friedhof",               28 },
+    { "SM: Bibliothek",             32 },
+    { "SM: Waffenkammer",           35 },
+    { "SM: Kathedrale",             38 },
+    { "Die Huegel von Razorfen",    35 },
+    { "Uldaman",                    40 },
+    { "Zul'Farrak",                 42 },
+    { "Maraudon",                   45 },
+    { "Der Tempel von Atal'Hakkar", 48 },
+    { "Blackrocktiefen",            50 },
+    { "Untere Schwarzfelsspitze",   55 },
+    { "Obere Schwarzfelsspitze",    55 },
+    { "Duesterbruch",               55 },
+    { "Scholomance",                55 },
+    { "Stratholme",                 55 },
+    { "Hoellenfeuerbollwerk",       58 },
+    { "Der Blutkessel",             59 },
+    { "Die Sklavenunterkuenfte",    60 },
+    { "Der Tiefensumpf",            61 },
+    { "Die Managruft",              62 },
+    { "Auchenaikrypta",             63 },
+    { "Sethekkhallen",              65 },
+    { "Das Schattenlabyrinth",      68 },
+    { "Die Zerschmetterten Hallen", 68 },
+    { "Die Dampfkammer",            68 },
+    { "Die Botanika",               68 },
+    { "Die Arkatraz",               68 },
+    { "Das alte Hillsbrad",         66 },
+    { "Der Schwarze Morast",        68 },
+    { "Magisterterrasse",           68 },
 } or {
-    { "Custom Dungeon",          1  },
-    { "Ragefire Chasm",          20 },
-    { "Wailing Caverns",         22 },
-    { "The Deadmines",           22 },
-    { "Shadowfang Keep",         26 },
-    { "The Stockade",            26 },
-    { "Gnomeregan",              30 },
-    { "SM: Library",             36 },
-    { "SM: Graveyard",           38 },
-    { "SM: Armory",              40 },
-    { "SM: Cathedral",           42 },
-    { "Razorfen Kraul",          38 },
-    { "Razorfen Downs",          44 },
-    { "Uldaman",                 46 },
-    { "Zul'Farrak",              50 },
-    { "Maraudon",                52 },
-    { "Sunken Temple",           55 },
-    { "Blackrock Depths",        58 },
-    { "Lower Blackrock Spire",   58 },
-    { "Upper Blackrock Spire",   58 },
-    { "Dire Maul",               58 },
-    { "Scholomance",             58 },
-    { "Stratholme",              58 },
-    { "Hellfire Ramparts",       62 },
-    { "The Blood Furnace",       62 },
-    { "The Slave Pens",          62 },
-    { "The Underbog",            63 },
-    { "Mana-Tombs",              64 },
-    { "Auchenai Crypts",         64 },
-    { "Sethekk Halls",           65 },
-    { "Shadow Labyrinth",        68 },
-    { "The Shattered Halls",     68 },
-    { "The Steam Vaults",        68 },
-    { "The Botanica",            68 },
-    { "The Arcatraz",            68 },
-    { "Old Hillsbrad Foothills", 66 },
-    { "The Black Morass",        68 },
-    { "Magisters' Terrace",      68 },
+    { "Custom Dungeon",             1  },
+    { "Ragefire Chasm",             13, "H" },
+    { "Wailing Caverns",            15 },
+    { "The Deadmines",              15 },
+    { "Shadowfang Keep",            18 },
+    { "The Stockade",               22, "A" },
+    { "Blackfathom Deeps",          20 },
+    { "Razorfen Kraul",             25 },
+    { "Gnomeregan",                 24 },
+    { "SM: Graveyard",              28 },
+    { "SM: Library",                32 },
+    { "SM: Armory",                 35 },
+    { "SM: Cathedral",              38 },
+    { "Razorfen Downs",             35 },
+    { "Uldaman",                    40 },
+    { "Zul'Farrak",                 42 },
+    { "Maraudon",                   45 },
+    { "Sunken Temple",              48 },
+    { "Blackrock Depths",           50 },
+    { "Lower Blackrock Spire",      55 },
+    { "Upper Blackrock Spire",      55 },
+    { "Dire Maul",                  55 },
+    { "Scholomance",                55 },
+    { "Stratholme",                 55 },
+    { "Hellfire Ramparts",          58 },
+    { "The Blood Furnace",          59 },
+    { "The Slave Pens",             60 },
+    { "The Underbog",               61 },
+    { "Mana-Tombs",                 62 },
+    { "Auchenai Crypts",            63 },
+    { "Sethekk Halls",              65 },
+    { "Shadow Labyrinth",           68 },
+    { "The Shattered Halls",        68 },
+    { "The Steam Vaults",           68 },
+    { "The Botanica",               68 },
+    { "The Arcatraz",               68 },
+    { "Old Hillsbrad Foothills",    66 },
+    { "The Black Morass",           68 },
+    { "Magisters' Terrace",         68 },
 }
+-- Eigene Fraktion einmalig ermitteln; Eintraege der Gegenfraktion werden ausgeblendet
+local playerFaction = UnitFactionGroup and UnitFactionGroup("player") or "Alliance"
+local function DungeonFitsFaction(d)
+    if not d[3] then return true end
+    return (d[3]=="A" and playerFaction=="Alliance") or (d[3]=="H" and playerFaction=="Horde")
+end
+
+-- Raids: { Name, Raid-Groesse } — Groesse steuert die Vorbefuellung der Rollen-Plaetze
+local RAIDS = isDE and {
+    { "Karazhan",                    10 },
+    { "Zul'Aman",                    10 },
+    { "Gruuls Unterschlupf",         25 },
+    { "Magtheridons Kammer",         25 },
+    { "Hoehle des Schlangenschreins",25 },
+    { "Festung der Stuerme",         25 },
+    { "Schlacht um den Hyjal",       25 },
+    { "Der Schwarze Tempel",         25 },
+    { "Sonnenbrunnenplateau",        25 },
+    { "Zul'Gurub",                   20 },
+    { "Ruinen von Ahn'Qiraj",        20 },
+    { "Geschmolzener Kern",          40 },
+    { "Onyxias Hort",                40 },
+    { "Pechschwingenhort",           40 },
+    { "Tempel von Ahn'Qiraj",        40 },
+    { "Naxxramas",                   40 },
+} or {
+    { "Karazhan",                    10 },
+    { "Zul'Aman",                    10 },
+    { "Gruul's Lair",                25 },
+    { "Magtheridon's Lair",          25 },
+    { "Serpentshrine Cavern",        25 },
+    { "Tempest Keep",                25 },
+    { "Battle for Mount Hyjal",      25 },
+    { "Black Temple",                25 },
+    { "Sunwell Plateau",             25 },
+    { "Zul'Gurub",                   20 },
+    { "Ruins of Ahn'Qiraj",          20 },
+    { "Molten Core",                 40 },
+    { "Onyxia's Lair",               40 },
+    { "Blackwing Lair",              40 },
+    { "Temple of Ahn'Qiraj",         40 },
+    { "Naxxramas",                   40 },
+}
+-- Rollen-Presets nach Raid-Groesse: {TANK, HEAL, DPS}
+local RAID_PRESETS = { [10]={2,3,5}, [20]={2,5,13}, [25]={3,6,16}, [40]={4,10,26} }
+
+-- Instanz-Namen sprachneutral uebertragen: DE- und EN-Listen sind parallel sortiert,
+-- daher reicht der Index ("D:5" / "R:3"). Freitext (Wunsch-Dungeon, alte Events) bleibt unveraendert.
+local function InstanceToToken(name)
+    if not name or name=="" then return "" end
+    for i,d in ipairs(DUNGEONS) do if d[1]==name then return "D:"..i end end
+    for i,r in ipairs(RAIDS) do if r[1]==name then return "R:"..i end end
+    return name
+end
+local function TokenToInstance(tok)
+    if not tok or tok=="" then return "" end
+    local t,i=tok:match("^([DR]):(%d+)$")
+    if t=="D" then local d=DUNGEONS[tonumber(i)]; return d and d[1] or tok end
+    if t=="R" then local r=RAIDS[tonumber(i)]; return r and r[1] or tok end
+    return tok
+end
 
 -- Klassen/Rollen fuer Event-Signup (TBC Classic: keine Death Knights/Monks)
 local CLASS_TOKENS = {"WARRIOR","PALADIN","HUNTER","ROGUE","PRIEST","SHAMAN","MAGE","WARLOCK","DRUID"}
@@ -430,7 +529,12 @@ local function InitDB()
     if not GuildMarketDB.config.guildEventRank then GuildMarketDB.config.guildEventRank=9 end
     if not GuildMarketDB.config.configRank then GuildMarketDB.config.configRank=0 end
     if not GuildMarketDB.config.auctionRank then GuildMarketDB.config.auctionRank=9 end
+    if not GuildMarketDB.config.dkpAdjustRank then GuildMarketDB.config.dkpAdjustRank=9 end
+    if not GuildMarketDB.config.merchRank then GuildMarketDB.config.merchRank=9 end
     if not GuildMarketDB.auctions then GuildMarketDB.auctions={} end
+    if not GuildMarketDB.merch then GuildMarketDB.merch={} end
+    if not GuildMarketDB.merchOrders then GuildMarketDB.merchOrders={} end
+    if not GuildMarketDB.merchDone then GuildMarketDB.merchDone={} end
     -- Migration v2: alle Rechte auf "jeder" zuruecksetzen (fruehere Defaults waren Offizier)
     if (GuildMarketDB.config.cfgVer or 0)<2 then
         GuildMarketDB.config.eventConfirmRank=9; GuildMarketDB.config.guildEventRank=9; GuildMarketDB.config.cfgVer=2
@@ -474,7 +578,7 @@ end
 local function Broadcast(id,e)   SendGuild(Serialize("POST",id,e)) end
 function GM_DeleteListing(id) GuildMarketDB.listings[id]=nil; SendGuild("DEL|"..id) end
 function GM_RequestSync()     SendGuild("REQ") end
-local function BroadcastConfig() local c=GuildMarketDB.config; SendGuild("CFG|"..c.postRank.."|"..c.deleteRank.."|"..(c.eventRank or 9).."|"..(c.eventDeleteRank or 9).."|"..(c.dkpPerEvent or 10).."|"..(c.eventConfirmRank or 9).."|"..(c.guildEventRank or 9).."|"..(c.configRank or 0).."|"..(c.auctionRank or 9)) end
+local function BroadcastConfig() local c=GuildMarketDB.config; SendGuild("CFG|"..c.postRank.."|"..c.deleteRank.."|"..(c.eventRank or 9).."|"..(c.eventDeleteRank or 9).."|"..(c.dkpPerEvent or 10).."|"..(c.eventConfirmRank or 9).."|"..(c.guildEventRank or 9).."|"..(c.configRank or 0).."|"..(c.auctionRank or 9).."|"..(c.dkpAdjustRank or 9).."|"..(c.merchRank or 9)) end
 
 -- ============================================================
 -- DKP-Punktekonto (Sync: neuester Zeitstempel pro Spieler gewinnt)
@@ -510,6 +614,13 @@ local function CanManageAuction(a)
     if a.seller==UnitName("player") then return true end
     if not GuildMarketDB or not GuildMarketDB.config then return playerRankIndex<=1 end
     return playerRankIndex<=(GuildMarketDB.config.eventConfirmRank or 9)
+end
+-- Empfangsseitige Pruefung: Darf dieser Absender die Auktion beenden/abbrechen?
+local function IsAucSenderAuthorized(a,senderName)
+    if a.seller==senderName then return true end
+    local r=GetMemberRank(senderName)
+    if r==nil then return false end
+    return r==0 or r<=((GuildMarketDB.config and GuildMarketDB.config.eventConfirmRank) or 9)
 end
 local function AuctionTopBid(a)
     local top,topAmt=nil,0
@@ -557,7 +668,20 @@ local function BroadcastAuctions()
     if not GuildMarketDB or not GuildMarketDB.auctions then return end
     local me=UnitName("player")
     for id,a in pairs(GuildMarketDB.auctions) do
-        if a.seller==me and not a.closed then SendGuild(SerializeAuction(id,a)) end
+        if a.seller==me and not a.closed then
+            SendGuild(SerializeAuction(id,a))
+            -- Verkaeufer relayed alle bekannten Gebote (auch von Offline-Bietern)
+            local cur=""
+            for name,b in pairs(a.bids or {}) do
+                local e=name..":"..(b.amt or 0)..":"..(b.ts or 0)
+                if cur~="" and #cur+#e+1>190 then SendGuild("AUCBIDR|"..id.."|"..cur); cur=e
+                else cur=(cur=="" and e or cur.."|"..e) end
+            end
+            if cur~="" then SendGuild("AUCBIDR|"..id.."|"..cur) end
+        elseif a.seller==me and a.closed then
+            -- Verpasste Zuschlaege nachziehen (ohne Kontostand: der kommt via DKPSYNC)
+            SendGuild("AUCEND|"..id.."|"..(a.winner or "-").."|"..(a.winAmt or 0).."||")
+        end
         local b=a.bids and a.bids[me]
         if b and not a.closed then SendGuild("AUCBID|"..id.."|"..(b.amt or 0).."|"..(b.ts or time())) end
     end
@@ -588,6 +712,112 @@ do
     end)
 end
 local function BroadcastMine()   local me=UnitName("player"); for id,e in pairs(GuildMarketDB.listings) do if e.contact==me then Broadcast(id,e) end end end
+
+-- ============================================================
+-- Merch-Shop (Artikel gegen Gildenpunkte; stock: 0=unbegrenzt, -1=ausverkauft)
+-- ============================================================
+local RefreshMerchFrame  -- forward-declared, in GM_BuildMerchFrame gesetzt
+local function CanCreateMerch()
+    if IsGM() then return true end
+    if not GuildMarketDB or not GuildMarketDB.config then return true end
+    return playerRankIndex<=(GuildMarketDB.config.merchRank or 9)
+end
+local function CanManageMerch(m)
+    if m.seller==UnitName("player") then return true end
+    return CanCreateMerch()
+end
+local function IsMerchSenderAuthorized(m,senderName)
+    if m.seller==senderName then return true end
+    local r=GetMemberRank(senderName)
+    if r==nil then return false end
+    return r==0 or r<=((GuildMarketDB.config and GuildMarketDB.config.merchRank) or 9)
+end
+local function SerializeMerch(id,m)
+    local item=(m.item or ""):gsub("|",""):sub(1,40)
+    return "MSHPOST|"..id.."|"..tostring(m.itemId or 0).."|"..tostring(m.price or 1).."|"..tostring(m.stock or 0).."|"..item
+end
+local function PostMerch(item,itemId,link,price,stock)
+    local me=UnitName("player"); local id="MSH:"..me..":"..time()
+    local m={item=item,itemId=itemId,link=link,price=price,stock=stock,seller=me,created=time()}
+    GuildMarketDB.merch[id]=m; SendGuild(SerializeMerch(id,m)); return id
+end
+local function DeleteMerch(id) GuildMarketDB.merch[id]=nil; SendGuild("MSHDEL|"..id) end
+local function ApplyMerchPurchase(m)
+    if (m.stock or 0)>1 then m.stock=m.stock-1
+    elseif m.stock==1 then m.stock=-1 end -- letzter Artikel → ausverkauft
+end
+-- Kauf-Ankuendigung im echten Gildenchat (zufaelliger Spruch, sendet nur der Kaeufer)
+local MSH_CHAT_LINES = isDE and {
+    "%s hat im Gilden-Shop zugeschlagen: %s fuer %d Punkte! Ein Kauf mit Stil!",
+    "Frisch ueber die Ladentheke: %s goennt sich %s (%d Punkte). Viel Freude damit!",
+    "Kassensturz im Merch-Shop! %s kauft %s fuer %d Punkte.",
+    "Shoppingtour erfolgreich: %s ist jetzt stolzer Besitzer von %s (%d Punkte)!",
+} or {
+    "%s just splurged in the guild shop: %s for %d points! Shopping in style!",
+    "Fresh off the counter: %s treats themselves to %s (%d points). Enjoy!",
+    "Cha-ching! %s buys %s for %d points in the merch shop.",
+    "Shopping spree complete: %s is now the proud owner of %s (%d points)!",
+}
+local function CanConfirmOrder(o)
+    if o.buyer==UnitName("player") then return false end -- eigener Kauf: nur ansehen
+    if o.seller==UnitName("player") then return true end
+    return CanCreateMerch() -- merchRank-berechtigt oder GM
+end
+local function CountPendingForMe()
+    local n=0
+    for _,o in pairs((GuildMarketDB and GuildMarketDB.merchOrders) or {}) do
+        if CanConfirmOrder(o) then n=n+1 end
+    end
+    return n
+end
+local function ConfirmOrder(oid)
+    local o=GuildMarketDB.merchOrders[oid]; if not o then return end
+    GuildMarketDB.merchOrders[oid]=nil; GuildMarketDB.merchDone[oid]=time()
+    SendGuild("MSHCONF|"..oid)
+    print(T.."[GuildMarkt]"..X.." "..L.MSH_CONFIRMED.." "..W..(o.item or "?")..X.." — "..Gr..(o.buyer or "?")..X)
+    if GM_UpdateMerchButton then GM_UpdateMerchButton() end
+end
+local function BuyMerch(id)
+    local m=GuildMarketDB.merch[id]; if not m or m.stock==-1 then return end
+    local me=UnitName("player")
+    local price=tonumber(m.price) or 0
+    if GetDKP(me)<price then print(R.."[GuildMarkt]"..X.." "..L.MSH_NOPOINTS); return end
+    ApplyMerchPurchase(m)
+    local ts=time(); local nb=GetDKP(me)-price
+    ApplyDKP(me,nb,ts)
+    local oid="ORD:"..me..":"..ts
+    GuildMarketDB.merchOrders[oid]={mid=id,item=m.item,buyer=me,seller=m.seller,price=price,ts=ts}
+    SendGuild("MSHBUY|"..id.."|"..nb.."|"..ts.."|"..oid)
+    print(T.."[GuildMarkt]"..X.." "..Gr..me..X.." "..L.MSH_BOUGHT.." "..W..(m.item or "?")..X.." ("..G..price..X..") "..L.MSH_FROM.." "..W..(m.seller or "?")..X)
+    if IsInGuild() then
+        local line=MSH_CHAT_LINES[math.random(#MSH_CHAT_LINES)]
+        SendChatMessage("[GuildMarkt] "..string.format(line,me,(m.item or "?"),price),"GUILD")
+    end
+end
+local function BroadcastMerch()
+    if not GuildMarketDB or not GuildMarketDB.merch then return end
+    local me=UnitName("player")
+    for id,m in pairs(GuildMarketDB.merch) do
+        if m.seller==me then SendGuild(SerializeMerch(id,m)) end
+    end
+    -- eigene offene Kaeufe nachverteilen (Item-Name pipe-bereinigt, letztes Feld)
+    for oid,o in pairs(GuildMarketDB.merchOrders or {}) do
+        if o.buyer==me then
+            SendGuild("MSHORD|"..oid.."|"..(o.mid or "").."|"..tostring(o.price or 0).."|"..tostring(o.ts or 0)
+                .."|"..(o.seller or "?").."|"..((o.item or "?"):gsub("|","")))
+        end
+    end
+end
+local function PruneMerchOrders()
+    if not GuildMarketDB then return end
+    local now=time()
+    for oid,ts in pairs(GuildMarketDB.merchDone or {}) do
+        if ts+7*86400<now then GuildMarketDB.merchDone[oid]=nil end
+    end
+    for oid,o in pairs(GuildMarketDB.merchOrders or {}) do
+        if (o.ts or 0)+30*86400<now then GuildMarketDB.merchOrders[oid]=nil end
+    end
+end
 
 -- ============================================================
 -- Kalender-Hilfsfunktionen / Calendar helpers
@@ -624,7 +854,7 @@ local function SerializeEvent(id,ev)
     local title=(ev.title or ""):gsub("|",""):sub(1,50)
     local desc=(ev.desc or ""):gsub("|",""):sub(1,60)
     local tstr=(ev.tstr or "00:00"):sub(1,5)
-    local dungeon=(ev.dungeon or ""):gsub("|","")
+    local dungeon=InstanceToToken((ev.dungeon or ""):gsub("|",""))
     local r=ev.roles or {}
     return "EVTPOST|"..id.."|"..title.."|"..tostring(ev.datets or 0).."|"..tstr.."|"
         ..tostring(r.TANK or 0).."|"..tostring(r.HEAL or 0).."|"..tostring(r.DPS or 0).."|"..dungeon
@@ -635,7 +865,7 @@ local function DeserializeEvent(msg)
     if #t<12 then return nil,nil end
     return t[2],{title=t[3],datets=tonumber(t[4]) or 0,tstr=t[5],
         roles={TANK=tonumber(t[6]) or 0,HEAL=tonumber(t[7]) or 0,DPS=tonumber(t[8]) or 0},
-        dungeon=t[9] or "",etype=t[10]=="GUILD" and "GUILD" or "DUNGEON",points=tonumber(t[11]) or 0,
+        dungeon=TokenToInstance(t[9] or ""),etype=t[10]=="GUILD" and "GUILD" or "DUNGEON",points=tonumber(t[11]) or 0,
         desc=t[12] or "",signups={},creator=""}
 end
 -- Rollen-Status wird nicht mit-synchronisiert, sondern deterministisch aus signups+ts hergeleitet,
@@ -698,11 +928,32 @@ local function ConfirmAttendance(eventId,player)
     ApplyDKP(player,newBal,ts)
     SendGuild("EVTCONF|"..eventId.."|"..player.."|"..newBal.."|"..ts)
 end
+-- Roster-Snapshot des Erstellers: verteilt ALLE Signups (auch von Offline-Spielern)
+-- und raeumt verpasste Abmeldungen ab, da der Empfaenger die Liste komplett ersetzt.
+-- Chunks: F = einzige Nachricht, B/M/E = Beginn/Mitte/Ende (Reihenfolge pro Sender garantiert)
+local function SendEventRoster(id,ev)
+    local entries={}
+    for name,s in pairs(ev.signups or {}) do
+        if type(s)=="table" then
+            entries[#entries+1]=name..":"..(s.role or "DPS")..":"..(s.class or "")..":"..(s.ts or 0)..":"..(s.confirmed and 1 or 0)
+        end
+    end
+    local chunks={}; local cur=""
+    for _,e in ipairs(entries) do
+        if cur~="" and #cur+#e+1>190 then chunks[#chunks+1]=cur; cur=e
+        else cur=(cur=="" and e or cur.."|"..e) end
+    end
+    chunks[#chunks+1]=cur -- auch leer senden: leert das Roster beim Empfaenger (Unsign-Nachzug)
+    for i,c in ipairs(chunks) do
+        local flag=(#chunks==1 and "F") or (i==1 and "B") or (i==#chunks and "E") or "M"
+        SendGuild("EVTROS|"..id.."|"..flag..(c~="" and ("|"..c) or ""))
+    end
+end
 local function BroadcastEvents()
     if not GuildMarketDB or not GuildMarketDB.events then return end
     local me=UnitName("player")
     for id,ev in pairs(GuildMarketDB.events) do
-        if ev.creator==me then SendGuild(SerializeEvent(id,ev)) end
+        if ev.creator==me then SendGuild(SerializeEvent(id,ev)); SendEventRoster(id,ev) end
         local s=ev.signups and ev.signups[me]
         if type(s)=="table" then SendGuild("EVTSIGN|"..id.."|"..(s.role or "DPS").."|"..(s.class or "").."|"..(s.ts or time())) end
     end
@@ -734,7 +985,7 @@ end
 -- UI Globals
 -- ============================================================
 local mainFrame,configFrame,listContent,calContent,countText,userCountText,rows,ebItem
-local hdrFS={}; local postBtn_ref
+local hdrFS={}; local postBtn_ref; local merchBtn_ref
 local calMonthLbl; local calWeekFS={}; local calSetDateField
 local addonUsers={}
 local secNormal,secDienst
@@ -742,6 +993,13 @@ local currentFilter="ALL"; local searchText=""
 local currentMode="LIST"; local selectedEventId=nil
 local calViewYear, calViewMonth
 do local t=date("*t"); calViewYear,calViewMonth=t.year,t.month end
+
+-- Shop-Button-Highlight: zeigt Anzahl offener Kaeufe, die ich bestaetigen kann
+function GM_UpdateMerchButton()
+    if not merchBtn_ref then return end
+    local n=CountPendingForMe()
+    merchBtn_ref:SetText(n>0 and (G.."Shop ("..n..")"..X) or "Shop")
+end
 local postType="BIETE"; local postPriceType="VHB"; local postFree=false; local postBeruf=BERUFE[1]
 local postDungeon=DUNGEONS[1][1]  -- lokalisiert: "Wunsch-Dungeon" (DE) / "Custom Dungeon" (EN)
 rows={}
@@ -996,7 +1254,7 @@ end
 function GM_BuildConfigFrame()
     if configFrame then configFrame:Show(); return end
     local f=CreateFrame("Frame","GuildMarketConfigFrame",UIParent,"BasicFrameTemplateWithInset")
-    f:SetSize(700,400); f:SetPoint("CENTER",UIParent,"CENTER",0,0)
+    f:SetSize(700,480); f:SetPoint("CENTER",UIParent,"CENTER",0,0)
     f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
     f:SetFrameStrata("DIALOG"); f:SetFrameLevel(20); f:Hide()
@@ -1028,10 +1286,12 @@ function GM_BuildConfigFrame()
     -- "Rechte aendern ab" darf nur der GM selbst umstellen (sonst koennte man sich Rechte erweitern)
     local ddCFG=RankDD("Cfg",8,-220,function() return GuildMarketDB.config.configRank or 0 end,function(v) GuildMarketDB.config.configRank=v end,G..L.CFG_CFGRANK..X)
     local ddA=RankDD("Auc",350,-220,function() return GuildMarketDB.config.auctionRank or 9 end,function(v) GuildMarketDB.config.auctionRank=v end,G..L.CFG_AUCRANK..X)
+    local ddDA=RankDD("DkpAdj",8,-282,function() return GuildMarketDB.config.dkpAdjustRank or 9 end,function(v) GuildMarketDB.config.dkpAdjustRank=v end,G..L.CFG_DKPADJRANK..X)
+    local ddM=RankDD("Merch",350,-282,function() return GuildMarketDB.config.merchRank or 9 end,function(v) GuildMarketDB.config.merchRank=v end,G..L.CFG_MERCHRANK..X)
     local lbDkp=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
-    lbDkp:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",8,-286); lbDkp:SetText(G..L.CFG_DKPPER..X)
+    lbDkp:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",8,-348); lbDkp:SetText(G..L.CFG_DKPPER..X)
     local ebDkp=CreateFrame("EditBox","GuildMarketCfgDkpBox",f,"InputBoxTemplate")
-    ebDkp:SetSize(60,22); ebDkp:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",200,-282)
+    ebDkp:SetSize(60,22); ebDkp:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",200,-344)
     ebDkp:SetAutoFocus(false); ebDkp:SetMaxLetters(4); ebDkp:SetNumeric(true)
     ebDkp:SetScript("OnTextChanged",function(self)
         local v=tonumber(self:GetText()); if v then GuildMarketDB.config.dkpPerEvent=v end
@@ -1044,8 +1304,8 @@ function GM_BuildConfigFrame()
         local canEdit=CanEditConfig()
         if not canEdit then sB:Disable(); hint:SetText(R..L.CFG_NOEDIT..X)
         else sB:Enable(); hint:SetText(Dg.."Einstellungen werden per Sync verteilt."..X) end
-        ddP:Refresh(); ddD:Refresh(); ddE:Refresh(); ddED:Refresh(); ddC:Refresh(); ddGE:Refresh(); ddCFG:Refresh(); ddA:Refresh()
-        for _,dd in ipairs({ddP,ddD,ddE,ddED,ddC,ddGE,ddA}) do
+        ddP:Refresh(); ddD:Refresh(); ddE:Refresh(); ddED:Refresh(); ddC:Refresh(); ddGE:Refresh(); ddCFG:Refresh(); ddA:Refresh(); ddDA:Refresh(); ddM:Refresh()
+        for _,dd in ipairs({ddP,ddD,ddE,ddED,ddC,ddGE,ddA,ddDA,ddM}) do
             if canEdit then UIDropDownMenu_EnableDropDown(dd) else UIDropDownMenu_DisableDropDown(dd) end
         end
         if IsGM() then UIDropDownMenu_EnableDropDown(ddCFG) else UIDropDownMenu_DisableDropDown(ddCFG) end
@@ -1569,11 +1829,11 @@ end
 -- ============================================================
 -- DKP-Punkteliste
 -- ============================================================
-local dkpFrame=nil
+local dkpFrame=nil; local dkpAdjLast="10"; local dkpSearch=""; local dkpOnlineOnly=false
 function GM_BuildDKPFrame()
     if dkpFrame then dkpFrame:Hide(); dkpFrame=nil end
     local f=CreateFrame("Frame","GuildMarketDKPFrame",UIParent,"BasicFrameTemplateWithInset")
-    f:SetSize(320,420); f:SetPoint("CENTER",UIParent,"CENTER",-120,0)
+    f:SetSize(340,480); f:SetPoint("CENTER",UIParent,"CENTER",-120,0)
     f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
     f:SetFrameStrata("DIALOG"); f:SetFrameLevel(25)
@@ -1584,36 +1844,100 @@ function GM_BuildDKPFrame()
     local mine=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
     mine:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-8)
     mine:SetText(Dg..L.DKP_YOURS.." "..X..G..GetDKP(me)..X)
+
+    -- Suche + Online-Filter (skaliert auch bei 500 Mitgliedern)
+    local ebSearchD=CreateFrame("EditBox","GuildMarketDkpSearchBox",f,"InputBoxTemplate")
+    ebSearchD:SetSize(150,20); ebSearchD:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",12,-26)
+    ebSearchD:SetAutoFocus(false); ebSearchD:SetMaxLetters(20); ebSearchD:SetText(dkpSearch)
+    local cbOnline=CreateFrame("CheckButton","GuildMarketDkpOnlineCB",f,"UICheckButtonTemplate")
+    cbOnline:SetSize(24,24); cbOnline:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",172,-24)
+    cbOnline:SetChecked(dkpOnlineOnly)
+    local cbLbl=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    cbLbl:SetPoint("LEFT",cbOnline,"RIGHT",0,0); cbLbl:SetText(Dg..L.DKP_ONLINE..X)
+
     local sep=f:CreateTexture(nil,"BACKGROUND"); sep:SetHeight(1)
-    sep:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-28); sep:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-28)
+    sep:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-52); sep:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-52)
     sep:SetColorTexture(0.3,0.5,0.8,0.7)
+
+    -- Manuelle Punkte-Anpassung: eigener konfigurierbarer Rang (GM immer)
+    local canAdjust=IsGM() or playerRankIndex<=((GuildMarketDB.config and GuildMarketDB.config.dkpAdjustRank) or 9)
+    local ebAdj
+    local listBottom=10
+    if canAdjust then
+        local lbAdj=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        lbAdj:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",10,14); lbAdj:SetText(Dg..L.DKP_ADJ..X)
+        ebAdj=CreateFrame("EditBox","GuildMarketDkpAdjBox",f,"InputBoxTemplate")
+        ebAdj:SetSize(50,20); ebAdj:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",80,12)
+        ebAdj:SetAutoFocus(false); ebAdj:SetMaxLetters(4); ebAdj:SetNumeric(true); ebAdj:SetText(dkpAdjLast)
+        listBottom=38
+    end
+
     local sfD=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
-    sfD:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,-34); sfD:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,10)
-    local sc=CreateFrame("Frame",nil,sfD); sc:SetWidth(260); sc:SetHeight(20); sfD:SetScrollChild(sc)
-    local list={}
-    for name,d in pairs(GuildMarketDB.dkp or {}) do list[#list+1]={name=name,bal=d.bal or 0} end
-    table.sort(list,function(a,b) if a.bal~=b.bal then return a.bal>b.bal end; return a.name<b.name end)
-    local ry=0
-    for i,entry in ipairs(list) do
-        local rbg=sc:CreateTexture(nil,"BACKGROUND"); rbg:SetHeight(20)
-        rbg:SetPoint("TOPLEFT",sc,"TOPLEFT",0,-ry); rbg:SetPoint("TOPRIGHT",sc,"TOPRIGHT",0,-ry)
-        if entry.name==me then rbg:SetColorTexture(0.10,0.18,0.10,0.8)
-        elseif i%2==1 then rbg:SetColorTexture(0.08,0.08,0.18,0.7) else rbg:SetColorTexture(0.05,0.05,0.12,0.5) end
-        local online=IsOnline(entry.name)
-        local lbRank=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-        lbRank:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-ry-3); lbRank:SetText(Dg..i.."."..X); lbRank:SetSize(24,14)
-        local lbN=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
-        lbN:SetPoint("TOPLEFT",sc,"TOPLEFT",30,-ry-3); lbN:SetSize(160,14); lbN:SetJustifyH("LEFT")
-        lbN:SetText(online and W..entry.name..X or Dg..entry.name..X)
-        local lbB=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
-        lbB:SetPoint("TOPRIGHT",sc,"TOPRIGHT",-6,-ry-3); lbB:SetSize(60,14); lbB:SetJustifyH("RIGHT")
-        lbB:SetText(G..entry.bal..X)
-        ry=ry+20; sc:SetHeight(ry)
+    sfD:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,-58); sfD:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,listBottom)
+    local sc
+
+    local RefreshDkpList  -- forward fuer AdjustDKP
+    local function AdjustDKP(name,sign)
+        local amt=tonumber(ebAdj and ebAdj:GetText()) or 0
+        if amt<=0 then return end
+        dkpAdjLast=tostring(amt)
+        local ts=time(); local nb=GetDKP(name)+sign*amt
+        ApplyDKP(name,nb,ts)
+        SendGuild("DKPSYNC|"..name..":"..nb..":"..ts)
+        print(T.."[GuildMarkt]"..X.." "..L.DKP_ADJUSTED.." "..W..name..X.." "..(sign>0 and Gr.."+" or R.."-")..amt..X.." ("..G..nb..X..")")
+        mine:SetText(Dg..L.DKP_YOURS.." "..X..G..GetDKP(me)..X)
+        RefreshDkpList()
     end
-    if #list==0 then
-        local hint=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-        hint:SetPoint("TOPLEFT",sc,"TOPLEFT",8,-6); hint:SetText(Dg..L.DKP_EMPTY..X); sc:SetHeight(26)
+
+    RefreshDkpList=function()
+        if sc then sc:Hide() end
+        sc=CreateFrame("Frame",nil,sfD); sc:SetWidth(280); sc:SetHeight(20); sfD:SetScrollChild(sc)
+        local st=dkpSearch:lower()
+        local list={}
+        for name,d in pairs(GuildMarketDB.dkp or {}) do
+            local match=(st=="" or name:lower():find(st,1,true)) and (not dkpOnlineOnly or IsOnline(name))
+            if match then list[#list+1]={name=name,bal=d.bal or 0} end
+        end
+        table.sort(list,function(a,b) if a.bal~=b.bal then return a.bal>b.bal end; return a.name<b.name end)
+        local ry=0
+        for i,entry in ipairs(list) do
+            local rbg=sc:CreateTexture(nil,"BACKGROUND"); rbg:SetHeight(20)
+            rbg:SetPoint("TOPLEFT",sc,"TOPLEFT",0,-ry); rbg:SetPoint("TOPRIGHT",sc,"TOPRIGHT",0,-ry)
+            if entry.name==me then rbg:SetColorTexture(0.10,0.18,0.10,0.8)
+            elseif i%2==1 then rbg:SetColorTexture(0.08,0.08,0.18,0.7) else rbg:SetColorTexture(0.05,0.05,0.12,0.5) end
+            local online=IsOnline(entry.name)
+            local lbRank=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            lbRank:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-ry-3); lbRank:SetText(Dg..i.."."..X); lbRank:SetSize(24,14)
+            local lbN=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
+            lbN:SetPoint("TOPLEFT",sc,"TOPLEFT",30,-ry-3); lbN:SetSize(160,14); lbN:SetJustifyH("LEFT")
+            lbN:SetText(online and W..entry.name..X or Dg..entry.name..X)
+            local lbB=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
+            lbB:SetPoint("TOPRIGHT",sc,"TOPRIGHT",canAdjust and -52 or -6,-ry-3); lbB:SetSize(60,14); lbB:SetJustifyH("RIGHT")
+            lbB:SetText(G..entry.bal..X)
+            if canAdjust then
+                local name=entry.name
+                local plusBtn=CreateFrame("Button",nil,sc,"UIPanelButtonTemplate"); plusBtn:SetSize(20,17)
+                plusBtn:SetPoint("TOPRIGHT",sc,"TOPRIGHT",-26,-ry-1); plusBtn:SetText("+")
+                plusBtn:SetScript("OnClick",function() AdjustDKP(name,1) end)
+                local minusBtn=CreateFrame("Button",nil,sc,"UIPanelButtonTemplate"); minusBtn:SetSize(20,17)
+                minusBtn:SetPoint("TOPRIGHT",sc,"TOPRIGHT",-4,-ry-1); minusBtn:SetText("-")
+                minusBtn:SetScript("OnClick",function() AdjustDKP(name,-1) end)
+            end
+            ry=ry+20; sc:SetHeight(ry)
+        end
+        if #list==0 then
+            local hint=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            hint:SetPoint("TOPLEFT",sc,"TOPLEFT",8,-6); hint:SetText(Dg..L.DKP_EMPTY..X); sc:SetHeight(26)
+        end
     end
+
+    ebSearchD:SetScript("OnTextChanged",function(self,user)
+        if user then dkpSearch=self:GetText(); RefreshDkpList() end
+    end)
+    cbOnline:SetScript("OnClick",function(self)
+        dkpOnlineOnly=self:GetChecked() and true or false; RefreshDkpList()
+    end)
+    RefreshDkpList()
     dkpFrame=f; f:Show()
 end
 
@@ -1790,6 +2114,174 @@ end
 RefreshLootFrame=function() if lootFrame and lootFrame:IsShown() then GM_BuildLootFrame() end end
 
 -- ============================================================
+-- Merch-Shop-Fenster
+-- ============================================================
+local merchFrame=nil
+function GM_BuildMerchFrame()
+    if merchFrame then merchFrame:Hide(); merchFrame=nil end
+    local f=CreateFrame("Frame","GuildMarketMerchFrame",UIParent,"BasicFrameTemplateWithInset")
+    f:SetSize(540,520); f:SetPoint("CENTER",UIParent,"CENTER",120,0)
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
+    f:SetFrameStrata("DIALOG"); f:SetFrameLevel(25)
+    f.TitleBg:SetHeight(28)
+    local titleFS=f:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+    titleFS:SetPoint("CENTER",f.TitleBg,"CENTER",0,2); titleFS:SetText(G..L.MSH_TITLE..X)
+    local me=UnitName("player")
+    local listTop=-8
+
+    -- ── Anlegen-Sektion (rang-beschraenkt, GM immer) ──
+    if CanCreateMerch() then
+        local lbItem=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        lbItem:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-10); lbItem:SetText(Dg..L.MSH_ITEM..X)
+        local ebMshItem=CreateFrame("EditBox","GuildMarketMshItemBox",f,"InputBoxTemplate")
+        ebMshItem:SetSize(320,22); ebMshItem:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",160,-6)
+        ebMshItem:SetAutoFocus(false); ebMshItem:SetMaxLetters(40); ebMshItem.itemLink=nil
+        ebMshItem:SetScript("OnReceiveDrag",function(self) local n,l=GM_GetDraggedItem(); if n then self:SetText(n); self.itemLink=l; ClearCursor() end end)
+        ebMshItem:SetScript("OnMouseDown",  function(self) local n,l=GM_GetDraggedItem(); if n then self:SetText(n); self.itemLink=l; ClearCursor() end end)
+        local lbPrice=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        lbPrice:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-40); lbPrice:SetText(Dg..L.MSH_PRICE..X)
+        local ebMshPrice=CreateFrame("EditBox","GuildMarketMshPriceBox",f,"InputBoxTemplate")
+        ebMshPrice:SetSize(50,22); ebMshPrice:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",160,-36)
+        ebMshPrice:SetAutoFocus(false); ebMshPrice:SetMaxLetters(4); ebMshPrice:SetNumeric(true)
+        local lbStock=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        lbStock:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",230,-40); lbStock:SetText(Dg..L.MSH_STOCK..X)
+        local ebMshStock=CreateFrame("EditBox","GuildMarketMshStockBox",f,"InputBoxTemplate")
+        ebMshStock:SetSize(44,22); ebMshStock:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",380,-36)
+        ebMshStock:SetAutoFocus(false); ebMshStock:SetMaxLetters(3); ebMshStock:SetNumeric(true); ebMshStock:SetText("0")
+        local createBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+        createBtn:SetSize(100,24); createBtn:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-8,-34)
+        createBtn:SetText(L.MSH_CREATE)
+        createBtn:SetScript("OnClick",function()
+            if not CanCreateMerch() then print(R.."[GuildMarkt]"..X.." "..L.MSH_NORANK); return end
+            local name=ebMshItem:GetText()
+            if name=="" then print(R.."[GuildMarkt]"..X.." "..L.MSH_NOITEM); return end
+            local price=tonumber(ebMshPrice:GetText())
+            if not price or price<1 then print(R.."[GuildMarkt]"..X.." "..L.MSH_NOPRICE); return end
+            local link=ebMshItem.itemLink
+            local itemId=link and tonumber(link:match("|Hitem:(%d+)"))
+            PostMerch(name,itemId,link,price,tonumber(ebMshStock:GetText()) or 0)
+            print(T.."[GuildMarkt]"..X.." "..L.MSH_CREATED.." "..W..name..X)
+            ebMshItem:SetText(""); ebMshItem.itemLink=nil; ebMshPrice:SetText(""); ebMshStock:SetText("0")
+            GM_BuildMerchFrame()
+        end)
+        local sep=f:CreateTexture(nil,"BACKGROUND"); sep:SetHeight(1)
+        sep:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-66); sep:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-66)
+        sep:SetColorTexture(0.3,0.5,0.8,0.7)
+        listTop=-72
+    end
+
+    -- ── Artikel-Liste ──
+    local sfM=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+    sfM:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,listTop); sfM:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,30)
+    local sc=CreateFrame("Frame",nil,sfM); sc:SetWidth(480); sc:SetHeight(20); sfM:SetScrollChild(sc)
+
+    local items={}
+    for id,m in pairs(GuildMarketDB.merch or {}) do items[#items+1]={id=id,m=m} end
+    table.sort(items,function(x,y) return (x.m.created or 0)>(y.m.created or 0) end)
+
+    local myBal=GetDKP(me)
+    local ry=0
+
+    -- ── Offene Kaeufe (Gildenleitung/Verkaeufer bestaetigen die Uebergabe) ──
+    local orders={}
+    for oid,o in pairs(GuildMarketDB.merchOrders or {}) do
+        if CanConfirmOrder(o) or o.buyer==me then orders[#orders+1]={oid=oid,o=o} end
+    end
+    table.sort(orders,function(x,y) return (x.o.ts or 0)<(y.o.ts or 0) end)
+    if #orders>0 then
+        local hdr=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        hdr:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-ry-4); hdr:SetText(G..L.MSH_ORDERS.." ("..#orders..")"..X)
+        ry=ry+22
+        for _,e in ipairs(orders) do
+            local oid,o=e.oid,e.o
+            local row=CreateFrame("Frame",nil,sc,"BackdropTemplate")
+            row:SetHeight(26); row:SetPoint("TOPLEFT",sc,"TOPLEFT",0,-ry); row:SetPoint("TOPRIGHT",sc,"TOPRIGHT",0,-ry)
+            row:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+                edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=6,insets={left=2,right=2,top=2,bottom=2}})
+            row:SetBackdropColor(0.16,0.12,0.03,0.92); row:SetBackdropBorderColor(0.8,0.65,0.1,0.9)
+            local online=IsOnline(o.buyer)
+            local dot=row:CreateTexture(nil,"OVERLAY"); dot:SetSize(14,14); dot:SetPoint("LEFT",row,"LEFT",6,0)
+            dot:SetTexture(online and "Interface\\FriendsFrame\\StatusIcon-Online" or "Interface\\FriendsFrame\\StatusIcon-Offline")
+            dot:SetVertexColor(1,1,1,online and 1 or 0.35)
+            local lbO=row:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            lbO:SetPoint("LEFT",row,"LEFT",24,0); lbO:SetJustifyH("LEFT"); lbO:SetWidth(270)
+            lbO:SetText((online and W or Dg)..(o.buyer or "?")..X..Dg.." — "..X..W..(o.item or "?")..X.." "..G.."("..(o.price or 0)..")"..X
+                ..(o.buyer==me and (" "..Dg..L.MSH_PENDING..X) or ""))
+            if CanConfirmOrder(o) then
+                local cfBtn=CreateFrame("Button",nil,row,"UIPanelButtonTemplate"); cfBtn:SetSize(90,20)
+                cfBtn:SetPoint("RIGHT",row,"RIGHT",-4,0); cfBtn:SetText(L.MSH_CONFIRM)
+                cfBtn:SetScript("OnClick",function() ConfirmOrder(oid); GM_BuildMerchFrame() end)
+                if online then
+                    local wb=CreateFrame("Button",nil,row,"UIPanelButtonTemplate"); wb:SetSize(80,20)
+                    wb:SetPoint("RIGHT",cfBtn,"LEFT",-4,0); wb:SetText(L.INFO_WHISPER)
+                    wb:SetScript("OnClick",function() OpenWhisper(o.buyer) end)
+                end
+            end
+            ry=ry+28; sc:SetHeight(ry)
+        end
+        ry=ry+6
+    end
+    for _,e in ipairs(items) do
+        local id,m=e.id,e.m
+        local soldOut=m.stock==-1
+        local row=CreateFrame("Frame",nil,sc,"BackdropTemplate")
+        row:SetHeight(46); row:SetPoint("TOPLEFT",sc,"TOPLEFT",0,-ry); row:SetPoint("TOPRIGHT",sc,"TOPRIGHT",0,-ry)
+        row:SetBackdrop({bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=6,insets={left=2,right=2,top=2,bottom=2}})
+        if soldOut then row:SetBackdropColor(0.06,0.06,0.06,0.6); row:SetBackdropBorderColor(0.15,0.15,0.15,0.5)
+        else row:SetBackdropColor(0.05,0.05,0.11,0.9); row:SetBackdropBorderColor(0.2,0.2,0.45,0.7) end
+        m.link=m.link or (m.itemId and m.itemId>0 and select(2,GetItemInfo(m.itemId)))
+        local itemBtn=CreateFrame("Button",nil,row)
+        itemBtn:SetSize(240,16); itemBtn:SetPoint("TOPLEFT",row,"TOPLEFT",8,-6)
+        local itemFS=itemBtn:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        itemFS:SetAllPoints(); itemFS:SetJustifyH("LEFT")
+        itemFS:SetText(m.link or W..(m.item or "?")..X)
+        itemBtn:SetScript("OnEnter",function(self)
+            GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
+            if m.link then GameTooltip:SetHyperlink(m.link)
+            elseif m.itemId and m.itemId>0 then GameTooltip:SetHyperlink("item:"..m.itemId)
+            else GameTooltip:ClearLines(); GameTooltip:AddLine(m.item or "?") end
+            GameTooltip:Show()
+        end)
+        itemBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+        local sellerFS=row:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        sellerFS:SetPoint("TOPLEFT",row,"TOPLEFT",260,-8)
+        sellerFS:SetText(Dg..L.AUC_SELLER.." "..X..W..(m.seller or "?")..X)
+        local stockFS=row:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        stockFS:SetPoint("TOPRIGHT",row,"TOPRIGHT",-8,-8)
+        if soldOut then stockFS:SetText(R..L.MSH_SOLDOUT..X)
+        else stockFS:SetText(Dg..L.MSH_STOCKLBL.." "..X..W..((m.stock or 0)==0 and (isDE and "unbegrenzt" or "unlimited") or m.stock)..X) end
+        local priceFS=row:CreateFontString(nil,"OVERLAY","GameFontNormal")
+        priceFS:SetPoint("BOTTOMLEFT",row,"BOTTOMLEFT",8,7)
+        priceFS:SetText(G..(m.price or 0)..X..Dg.." "..L.DKP_TITLE..X)
+        if not soldOut then
+            local buyBtn=CreateFrame("Button",nil,row,"UIPanelButtonTemplate"); buyBtn:SetSize(90,20)
+            buyBtn:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",-8,5); buyBtn:SetText(L.MSH_BUY)
+            if myBal<(m.price or 0) then buyBtn:Disable() end
+            buyBtn:SetScript("OnClick",function() BuyMerch(id); GM_BuildMerchFrame() end)
+        end
+        if CanManageMerch(m) then
+            local xBtn=CreateFrame("Button",nil,row,"UIPanelButtonTemplate"); xBtn:SetSize(20,18)
+            xBtn:SetPoint("TOPRIGHT",row,"TOPRIGHT",-8,-24); xBtn:SetText("×")
+            xBtn:SetScript("OnClick",function() DeleteMerch(id); GM_BuildMerchFrame() end)
+        end
+        ry=ry+48; sc:SetHeight(ry)
+    end
+    if ry==0 then
+        local hint=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+        hint:SetPoint("TOPLEFT",sc,"TOPLEFT",8,-8); hint:SetText(Dg..L.MSH_EMPTY..X); sc:SetHeight(30)
+    end
+
+    local mineFS=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    mineFS:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",10,8)
+    mineFS:SetText(Dg..L.DKP_YOURS.." "..X..G..GetDKP(me)..X)
+
+    merchFrame=f; f:Show()
+end
+RefreshMerchFrame=function() if merchFrame and merchFrame:IsShown() then GM_BuildMerchFrame() end end
+
+-- ============================================================
 -- Haupt-UI
 -- ============================================================
 local function BuildUI()
@@ -1821,8 +2313,22 @@ local function BuildUI()
     lootBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
     lootBtn:SetScript("OnClick",GM_BuildLootFrame)
 
+    local merchBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+    merchBtn:SetSize(68,20); merchBtn:SetPoint("RIGHT",lootBtn,"LEFT",-4,0)
+    merchBtn:SetText("Shop")
+    merchBtn:SetScript("OnEnter",function(self)
+        GameTooltip:SetOwner(self,"ANCHOR_BOTTOM"); GameTooltip:ClearLines()
+        GameTooltip:AddLine(G..L.MSH_TITLE..X)
+        local n=CountPendingForMe()
+        if n>0 then GameTooltip:AddLine(Gr..n.." "..L.MSH_ORDERS..X) end
+        GameTooltip:Show()
+    end)
+    merchBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    merchBtn:SetScript("OnClick",GM_BuildMerchFrame)
+    merchBtn_ref=merchBtn; GM_UpdateMerchButton()
+
     local infoBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-    infoBtn:SetSize(22,20); infoBtn:SetPoint("RIGHT",lootBtn,"LEFT",-4,0)
+    infoBtn:SetSize(22,20); infoBtn:SetPoint("RIGHT",merchBtn,"LEFT",-4,0)
     infoBtn:SetText("?")
     infoBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_BOTTOM"); GameTooltip:ClearLines(); GameTooltip:AddLine(G.."Marktplatz-Regeln & Kontakt"..X); GameTooltip:Show() end)
     infoBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
@@ -2070,7 +2576,7 @@ local function BuildUI()
         local plvl=UnitLevel("player") or 70
         UIDropDownMenu_Initialize(ddDungeon,function(_,level)
             for _,d in ipairs(DUNGEONS) do
-                if plvl>=d[2] then
+                if plvl>=d[2] and DungeonFitsFaction(d) then
                     local info=UIDropDownMenu_CreateInfo(); info.text=d[1]; info.value=d[1]
                     info.checked=(postDungeon==d[1])
                     info.func=function(btn) postDungeon=btn.value; UIDropDownMenu_SetSelectedValue(ddDungeon,btn.value); UIDropDownMenu_SetText(ddDungeon,btn.value) end
@@ -2235,22 +2741,50 @@ local function BuildUI()
     ebCalTitle:SetSize(330,22); ebCalTitle:SetPoint("TOPLEFT",calItemBg,"TOPLEFT",56,-38)
     ebCalTitle:SetAutoFocus(false); ebCalTitle:SetMaxLetters(50); ebCalTitle:Hide()
     local lbCalDungeon=calItemBg:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-    lbCalDungeon:SetPoint("TOPLEFT",calItemBg,"TOPLEFT",396,-26); lbCalDungeon:SetText(Dg.."Dungeon:"..X); lbCalDungeon:Hide()
-    local NONE_DUNGEON = isDE and "Kein Dungeon" or "No Dungeon"
+    lbCalDungeon:SetPoint("TOPLEFT",calItemBg,"TOPLEFT",396,-26); lbCalDungeon:SetText(Dg..(isDE and "Dungeon/Raid:" or "Dungeon/Raid:")..X); lbCalDungeon:Hide()
+    local NONE_DUNGEON = isDE and "Keine Instanz" or "No instance"
     local calDungeonSel = NONE_DUNGEON
+    local ApplyRaidPreset  -- forward-declared, nach den Rollen-Feldern definiert
     local ddCalDungeon=CreateFrame("Frame","GuildMarketCalDungeonDD",f,"UIDropDownMenuTemplate")
     ddCalDungeon:SetPoint("TOPLEFT",calItemBg,"TOPLEFT",386,-40)
     UIDropDownMenu_SetWidth(ddCalDungeon,110); ddCalDungeon:Hide()
-    UIDropDownMenu_Initialize(ddCalDungeon,function(_,level)
-        local ddInfo=UIDropDownMenu_CreateInfo(); ddInfo.text=NONE_DUNGEON; ddInfo.value=NONE_DUNGEON; ddInfo.checked=(calDungeonSel==NONE_DUNGEON)
-        ddInfo.func=function(btn) calDungeonSel=btn.value; UIDropDownMenu_SetSelectedValue(ddCalDungeon,btn.value); UIDropDownMenu_SetText(ddCalDungeon,btn.value) end
-        UIDropDownMenu_AddButton(ddInfo,level)
-        for i=2,#DUNGEONS do
-            local name=DUNGEONS[i][1]
-            local ddInfo2=UIDropDownMenu_CreateInfo(); ddInfo2.text=name; ddInfo2.value=name; ddInfo2.checked=(calDungeonSel==name)
-            ddInfo2.func=function(btn) calDungeonSel=btn.value; UIDropDownMenu_SetSelectedValue(ddCalDungeon,btn.value); UIDropDownMenu_SetText(ddCalDungeon,btn.value) end
-            UIDropDownMenu_AddButton(ddInfo2,level)
+    local function SelectInstance(name,raidSize)
+        calDungeonSel=name
+        UIDropDownMenu_SetSelectedValue(ddCalDungeon,name); UIDropDownMenu_SetText(ddCalDungeon,name)
+        if raidSize and ApplyRaidPreset then ApplyRaidPreset(raidSize) end
+        CloseDropDownMenus()
+    end
+    UIDropDownMenu_Initialize(ddCalDungeon,function(_,level,menuList)
+        if level==2 then
+            if menuList=="GM_DUNGEONS" then
+                for i=2,#DUNGEONS do
+                    if DungeonFitsFaction(DUNGEONS[i]) then
+                        local name=DUNGEONS[i][1]
+                        local ddInfo=UIDropDownMenu_CreateInfo(); ddInfo.text=name; ddInfo.value=name; ddInfo.checked=(calDungeonSel==name)
+                        ddInfo.func=function(btn) SelectInstance(btn.value) end
+                        UIDropDownMenu_AddButton(ddInfo,level)
+                    end
+                end
+            elseif menuList=="GM_RAIDS" then
+                for i=1,#RAIDS do
+                    local name,size=RAIDS[i][1],RAIDS[i][2]
+                    local ddInfo=UIDropDownMenu_CreateInfo()
+                    ddInfo.text=name.." "..Dg.."("..size..")"..X; ddInfo.value=name; ddInfo.checked=(calDungeonSel==name)
+                    ddInfo.func=function(btn) SelectInstance(btn.value,size) end
+                    UIDropDownMenu_AddButton(ddInfo,level)
+                end
+            end
+            return
         end
+        local ddInfo=UIDropDownMenu_CreateInfo(); ddInfo.text=NONE_DUNGEON; ddInfo.value=NONE_DUNGEON; ddInfo.checked=(calDungeonSel==NONE_DUNGEON)
+        ddInfo.func=function(btn) SelectInstance(btn.value) end
+        UIDropDownMenu_AddButton(ddInfo,level)
+        local subD=UIDropDownMenu_CreateInfo()
+        subD.text=isDE and "Dungeons" or "Dungeons"; subD.hasArrow=true; subD.notCheckable=true; subD.menuList="GM_DUNGEONS"; subD.keepShownOnClick=true
+        UIDropDownMenu_AddButton(subD,level)
+        local subR=UIDropDownMenu_CreateInfo()
+        subR.text=G..(isDE and "Raids" or "Raids")..X; subR.hasArrow=true; subR.notCheckable=true; subR.menuList="GM_RAIDS"; subR.keepShownOnClick=true
+        UIDropDownMenu_AddButton(subR,level)
     end)
     UIDropDownMenu_SetSelectedValue(ddCalDungeon,NONE_DUNGEON); UIDropDownMenu_SetText(ddCalDungeon,NONE_DUNGEON)
 
@@ -2297,6 +2831,10 @@ local function BuildUI()
             if ebCalPts:GetText()=="" then ebCalPts:SetText(tostring(GuildMarketDB.config.dkpPerEvent or 10)) end
         else lbCalPts:Hide(); ebCalPts:Hide() end
     end
+    ApplyRaidPreset=function(size)
+        local p=RAID_PRESETS[size]; if not p then return end
+        ebRoleTank:SetText(tostring(p[1])); ebRoleHeal:SetText(tostring(p[2])); ebRoleDps:SetText(tostring(p[3]))
+    end
 
     -- calNotizBg: y=101, h=40 → Beschreibung
     local calNotizBg=GM_MakeBg(f,0.04,0.06,0.04,0.92,0.12,0.28,0.15)
@@ -2314,12 +2852,23 @@ local function BuildUI()
     createEvtBtn:SetSize(160,28); createEvtBtn:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,44)
     createEvtBtn:SetText(L.CAL_CREATE); createEvtBtn:Hide()
 
+    -- Haken: Event-Erstellung + 1h-Erinnerung im Gildenchat ankuendigen (nur Ersteller-Client postet)
+    local calAnnounce=false
+    local cbAnnounce=CreateFrame("CheckButton","GuildMarketCalAnnounceCB",f,"UICheckButtonTemplate")
+    cbAnnounce:SetSize(26,26); cbAnnounce:SetPoint("LEFT",createEvtBtn,"RIGHT",8,0); cbAnnounce:Hide()
+    cbAnnounce:SetScript("OnClick",function(self) calAnnounce=self:GetChecked() and true or false end)
+    local lbAnnounce=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    lbAnnounce:SetPoint("LEFT",cbAnnounce,"RIGHT",2,0); lbAnnounce:SetText(Dg..L.CAL_ANNOUNCE..X); lbAnnounce:Hide()
+
     calSetDateField = function(dateStr)
         ebCalDate:SetText(dateStr); ebCalTitle:SetFocus()
     end
     createEvtBtn:SetScript("OnClick",function()
         if not GM_CanCreateEvent() then print(R.."[GuildMarkt]"..X.." "..L.CAL_NORANKC); return end
-        local title=ebCalTitle:GetText(); if title=="" then print(R.."[GuildMarkt]"..X.." "..L.CAL_NOTITLE); return end
+        local title=ebCalTitle:GetText()
+        -- Kein Titel? Gewaehlte Instanz als Titel uebernehmen
+        if title=="" and calDungeonSel~=NONE_DUNGEON then title=calDungeonSel end
+        if title=="" then print(R.."[GuildMarkt]"..X.." "..L.CAL_NOTITLE); return end
         local datets=GM_ParseEventDate(ebCalDate:GetText())
         if not datets then print(R.."[GuildMarkt]"..X.." "..L.CAL_NODATE); return end
         if datets<GM_TodayTs() then print(R.."[GuildMarkt]"..X.." "..L.CAL_PAST); return end
@@ -2331,6 +2880,14 @@ local function BuildUI()
         local pts = calEvtType=="GUILD" and (tonumber(ebCalPts:GetText()) or (GuildMarketDB.config.dkpPerEvent or 10)) or 0
         local newId=GM_PostEvent(title,datets,tstr,roles,ebCalDesc:GetText(),dungeon,calEvtType,pts)
         print(T.."[GuildMarkt]"..X.." "..L.CAL_CREATED.." "..Gr..title..X)
+        if calAnnounce then
+            local nev=GuildMarketDB.events[newId]
+            if nev then nev.announce=true end
+            if IsInGuild() then
+                local inst=(dungeon~="" and dungeon~=title) and (" ["..dungeon.."]") or ""
+                SendChatMessage("[GuildMarkt] "..string.format(L.CAL_CHAT_NEW,title,date("%d.%m.%Y",datets),tstr,inst),"GUILD")
+            end
+        end
         ebCalTitle:SetText(""); ebCalDate:SetText(""); ebCalTime:SetText("")
         ebRoleTank:SetText(""); ebRoleHeal:SetText(""); ebRoleDps:SetText(""); ebCalDesc:SetText(""); ebCalPts:SetText("")
         calDungeonSel=NONE_DUNGEON; UIDropDownMenu_SetSelectedValue(ddCalDungeon,NONE_DUNGEON); UIDropDownMenu_SetText(ddCalDungeon,NONE_DUNGEON)
@@ -2361,7 +2918,7 @@ local function BuildUI()
         ebRoleTank:Hide(); ebRoleHeal:Hide(); ebRoleDps:Hide()
         lbCalPts:Hide(); ebCalPts:Hide()
         calNotizBg:Hide(); ebCalDesc:Hide()
-        createEvtBtn:Hide()
+        createEvtBtn:Hide(); cbAnnounce:Hide(); lbAnnounce:Hide()
         ShowSection(postType); RefreshList()
     end
 
@@ -2385,10 +2942,12 @@ local function BuildUI()
         ebRoleTank:Show(); ebRoleHeal:Show(); ebRoleDps:Show()
         UpdateCalPtsVisibility()
         calNotizBg:Show(); ebCalDesc:Show()
-        createEvtBtn:Show()
+        createEvtBtn:Show(); cbAnnounce:Show(); lbAnnounce:Show()
+        cbAnnounce:SetChecked(calAnnounce)
         if GM_CanCreateEvent() then createEvtBtn:Enable() else createEvtBtn:Disable() end
         RefreshCalendar()
     end
+    GM_ActivateCalendarMode=ActivateCalendarMode -- global fuer Minimap-Button
 
     -- ── Post-Button ──────────────────────────────────────────
     postBtn:SetScript("OnClick",function()
@@ -2444,13 +3003,103 @@ local function DelayCall(sec,fn)
     fr:SetScript("OnUpdate",function(self,dt) t=t+dt; if t>=sec then self:SetScript("OnUpdate",nil); fn() end end)
 end
 
+-- ============================================================
+-- Minimap-Button (Links: Markt, Rechts: Kalender; ziehbar am Minimap-Rand)
+-- ============================================================
+local function CreateMinimapButton()
+    if GuildMarketMinimapBtn then return end
+    local btn=CreateFrame("Button","GuildMarketMinimapBtn",Minimap)
+    btn:SetSize(32,32); btn:SetFrameStrata("MEDIUM"); btn:SetFrameLevel(8)
+    btn:RegisterForClicks("LeftButtonUp","RightButtonUp")
+    btn:RegisterForDrag("LeftButton")
+    btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+    local overlay=btn:CreateTexture(nil,"OVERLAY")
+    overlay:SetSize(53,53); overlay:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    overlay:SetPoint("TOPLEFT")
+    local icon=btn:CreateTexture(nil,"BACKGROUND")
+    icon:SetSize(20,20); icon:SetTexture("Interface\\Icons\\INV_Misc_Coin_02")
+    icon:SetTexCoord(0.07,0.93,0.07,0.93); icon:SetPoint("CENTER",-1,1)
+    local function UpdatePos()
+        local angle=math.rad(GuildMarketDB.minimapPos or 210)
+        btn:ClearAllPoints()
+        btn:SetPoint("CENTER",Minimap,"CENTER",80*math.cos(angle),80*math.sin(angle))
+    end
+    btn:SetScript("OnDragStart",function(self)
+        self:SetScript("OnUpdate",function()
+            local mx,my=Minimap:GetCenter()
+            local cx,cy=GetCursorPosition()
+            local scale=Minimap:GetEffectiveScale()
+            GuildMarketDB.minimapPos=math.deg(math.atan2(cy/scale-my,cx/scale-mx))
+            UpdatePos()
+        end)
+    end)
+    btn:SetScript("OnDragStop",function(self) self:SetScript("OnUpdate",nil) end)
+    btn:SetScript("OnClick",function(_,button)
+        if button=="RightButton" then GM_OpenCalendar() else GM_Toggle() end
+    end)
+    btn:SetScript("OnEnter",function(self)
+        GameTooltip:SetOwner(self,"ANCHOR_LEFT"); GameTooltip:ClearLines()
+        GameTooltip:AddLine(G.."GuildMarket"..X)
+        GameTooltip:AddLine(Dg..L.MM_LEFT..X)
+        GameTooltip:AddLine(Dg..L.MM_RIGHT..X)
+        GameTooltip:Show()
+    end)
+    btn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    UpdatePos()
+end
+
+-- Gildenchat-Erinnerung ~1h vor eigenen angekuendigten Events (postet nur der Ersteller, genau einmal)
+local evtRemindTicker=CreateFrame("Frame",nil,UIParent)
+do
+    local acc=0
+    evtRemindTicker:SetScript("OnUpdate",function(_,dt)
+        acc=acc+dt; if acc<30 then return end
+        acc=0
+        if not GuildMarketDB or not GuildMarketDB.events or not IsInGuild() then return end
+        local me=UnitName("player"); local now=time()
+        for _,evt in pairs(GuildMarketDB.events) do
+            if evt.creator==me and evt.announce and not evt.reminded then
+                local hh,mm=(evt.tstr or ""):match("^(%d+):(%d+)$")
+                if hh then
+                    local evTime=(evt.datets or 0)+tonumber(hh)*3600+tonumber(mm)*60
+                    if evTime>now and evTime-now<=3600 then
+                        evt.reminded=true
+                        local sigCount=0
+                        for _,s in pairs(evt.signups or {}) do if type(s)=="table" then sigCount=sigCount+1 end end
+                        SendChatMessage("[GuildMarkt] "..string.format(L.CAL_CHAT_REM,evt.title or "?",evt.tstr or "?",sigCount),"GUILD")
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Login-Erinnerung: heutige Events im Chat auflisten
+local function PrintTodaysEvents()
+    if not GuildMarketDB or not GuildMarketDB.events then return end
+    local me=UnitName("player"); local today=GM_TodayTs()
+    local list={}
+    for _,evt in pairs(GuildMarketDB.events) do
+        if evt.datets==today then list[#list+1]=evt end
+    end
+    table.sort(list,function(a,b) return (a.tstr or "")<(b.tstr or "") end)
+    for _,evt in ipairs(list) do
+        local mine=evt.signups and evt.signups[me]
+        print(T.."[GuildMarkt]"..X.." "..G..L.REMIND_TODAY..X.." "..W..(evt.tstr or "").." "..(evt.title or "")..X
+            ..(mine and (" "..Gr..L.REMIND_SIGNED..X) or ""))
+    end
+end
+
+local rosStaging={}  -- EVTROS-Chunks pro Absender/Event bis zum Commit
 local ev=CreateFrame("Frame","GuildMarketEventFrame",UIParent)
 ev:RegisterEvent("PLAYER_LOGIN"); ev:RegisterEvent("CHAT_MSG_ADDON"); ev:RegisterEvent("GUILD_ROSTER_UPDATE")
 ev:SetScript("OnEvent",function(self,event,...)
     if event=="PLAYER_LOGIN" then
-        InitDB(); PruneExpired(); PruneExpiredEvents(); PruneAuctions(); if GuildRoster then GuildRoster() end
+        InitDB(); PruneExpired(); PruneExpiredEvents(); PruneAuctions(); PruneMerchOrders(); if GuildRoster then GuildRoster() end
         local me=UnitName("player"); if me then addonUsers[me]=true end
-        DelayCall(6,function() BroadcastMine(); GM_RequestSync(); BroadcastEvents(); SendGuild("EVTREQ"); SendGuild("DKPREQ"); SendGuild("AUCREQ") end)
+        DelayCall(6,function() BroadcastMine(); GM_RequestSync(); BroadcastEvents(); SendGuild("EVTREQ"); SendGuild("DKPREQ"); SendGuild("AUCREQ"); SendGuild("MSHREQ") end)
+        CreateMinimapButton()
+        DelayCall(12,PrintTodaysEvents)
         print(T.."[GuildMarkt]"..X.." "..L.MSG_LOADED.." — "..G.."/gmarkt"..X.." | "..Dg..(GetGuildInfo("player") or "")..X)
     elseif event=="GUILD_ROSTER_UPDATE" then
         UpdateRoster(); if mainFrame and mainFrame:IsShown() then RefreshList() end
@@ -2459,6 +3108,9 @@ ev:SetScript("OnEvent",function(self,event,...)
         if prefix~=MSG_PREFIX then return end
         local sn=sender:match("^([^%-]+)") or sender; addonUsers[sn]=true
         if userCountText then local n=0; for _ in pairs(addonUsers) do n=n+1 end; userCountText:SetText(G..n..X..Dg.." "..L.COUNT_USERS..X) end
+        -- Eigene Nachrichten ueberspringen: lokal wurde bereits alles angewendet
+        -- (verhindert u.a. doppelten Bestand-Abzug beim Merch-Kauf und Antworten auf eigene REQs)
+        if sn==UnitName("player") then return end
         if msg=="REQ" then BroadcastMine(); return end
         if msg:sub(1,3)=="CFG" then
             -- Nur akzeptieren, wenn der Absender laut Roster GM oder freigegebener Config-Rang ist
@@ -2473,12 +3125,81 @@ ev:SetScript("OnEvent",function(self,event,...)
                 if p[8] then GuildMarketDB.config.guildEventRank=tonumber(p[8]) or 9 end
                 if p[9] then GuildMarketDB.config.configRank=tonumber(p[9]) or 0 end
                 if p[10] then GuildMarketDB.config.auctionRank=tonumber(p[10]) or 9 end
+                if p[11] then GuildMarketDB.config.dkpAdjustRank=tonumber(p[11]) or 9 end
+                if p[12] then GuildMarketDB.config.merchRank=tonumber(p[12]) or 9 end
                 print(T.."[GuildMarkt]"..X.." "..L.MSG_SETTINGS); if mainFrame and mainFrame:IsShown() then RefreshList() end end; return
         end
         if msg:sub(1,3)=="DEL" then
             local id=msg:sub(5)
             if id and GuildMarketDB.listings[id] then local sN=sender:match("^([^%-]+)") or sender
                 if GuildMarketDB.listings[id].contact==sN then GuildMarketDB.listings[id]=nil; if mainFrame and mainFrame:IsShown() then RefreshList() end end end; return
+        end
+        -- ── Merch-Shop-Protokoll ────────────────────────────────
+        if msg=="MSHREQ" then BroadcastMerch(); return end
+        if msg:sub(1,7)=="MSHPOST" then
+            local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
+            local mid=p[2]
+            if mid then
+                local itemId=tonumber(p[3])
+                GuildMarketDB.merch[mid]={item=p[6] or "?",itemId=itemId,
+                    link=itemId and itemId>0 and select(2,GetItemInfo(itemId)) or nil,
+                    price=tonumber(p[4]) or 1,stock=tonumber(p[5]) or 0,seller=sn}
+                if RefreshMerchFrame then RefreshMerchFrame() end
+            end; return
+        end
+        if msg:sub(1,6)=="MSHBUY" then
+            local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
+            local mid,nb,bts,oid=p[2],tonumber(p[3]),tonumber(p[4]),p[5]
+            local m=mid and GuildMarketDB.merch[mid]
+            if m and m.stock~=-1 then
+                ApplyMerchPurchase(m)
+                if nb and bts then ApplyDKP(sn,nb,bts) end
+                if oid and oid~="" and not GuildMarketDB.merchDone[oid] then
+                    GuildMarketDB.merchOrders[oid]={mid=mid,item=m.item,buyer=sn,seller=m.seller,price=m.price,ts=bts or time()}
+                end
+                print(T.."[GuildMarkt]"..X.." "..Gr..sn..X.." "..L.MSH_BOUGHT.." "..W..(m.item or "?")..X.." ("..G..(m.price or 0)..X..") "..L.MSH_FROM.." "..W..(m.seller or "?")..X)
+                if GM_UpdateMerchButton then GM_UpdateMerchButton() end
+                if RefreshMerchFrame then RefreshMerchFrame() end
+            end; return
+        end
+        if msg:sub(1,7)=="MSHCONF" then
+            local oid=msg:sub(9)
+            local o=oid and GuildMarketDB.merchOrders[oid]
+            if o then
+                -- Bestaetigen darf: Verkaeufer des Artikels oder merchRank/GM laut Roster
+                local r=GetMemberRank(sn)
+                local ok=o.seller==sn or (r~=nil and (r==0 or r<=((GuildMarketDB.config and GuildMarketDB.config.merchRank) or 9)))
+                if ok then
+                    GuildMarketDB.merchOrders[oid]=nil; GuildMarketDB.merchDone[oid]=time()
+                    if GM_UpdateMerchButton then GM_UpdateMerchButton() end
+                    if RefreshMerchFrame then RefreshMerchFrame() end
+                end
+            end; return
+        end
+        if msg:sub(1,6)=="MSHORD" then
+            local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
+            local oid=p[2]
+            if oid and oid~="" then
+                if GuildMarketDB.merchDone[oid] then
+                    -- bereits uebergeben: dem Kaeufer Bescheid geben (nur wenn selbst berechtigt)
+                    local meN=UnitName("player")
+                    local sellerN=p[6] or "?"
+                    if sellerN==meN or CanCreateMerch() then SendGuild("MSHCONF|"..oid) end
+                elseif not GuildMarketDB.merchOrders[oid] then
+                    GuildMarketDB.merchOrders[oid]={mid=p[3],price=tonumber(p[4]) or 0,ts=tonumber(p[5]) or time(),
+                        seller=p[6] or "?",item=p[7] or "?",buyer=sn}
+                    if GM_UpdateMerchButton then GM_UpdateMerchButton() end
+                    if RefreshMerchFrame then RefreshMerchFrame() end
+                end
+            end; return
+        end
+        if msg:sub(1,6)=="MSHDEL" then
+            local mid=msg:sub(8)
+            local m=mid and GuildMarketDB.merch[mid]
+            if m and IsMerchSenderAuthorized(m,sn) then
+                GuildMarketDB.merch[mid]=nil
+                if RefreshMerchFrame then RefreshMerchFrame() end
+            end; return
         end
         -- ── Auktions-Protokoll ──────────────────────────────────
         if msg=="AUCREQ" then BroadcastAuctions(); return end
@@ -2492,6 +3213,24 @@ ev:SetScript("OnEvent",function(self,event,...)
                     link=itemId and select(2,GetItemInfo(itemId)) or nil,
                     minBid=tonumber(p[4]) or 1,endts=tonumber(p[5]) or 0,seller=sn,
                     bids=(old and old.bids) or {}}
+                if RefreshLootFrame then RefreshLootFrame() end
+            end; return
+        end
+        if msg:sub(1,7)=="AUCBIDR" then
+            -- Gebots-Relay: nur vom Verkaeufer der Auktion akzeptieren
+            local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
+            local aid=p[2]
+            local a=aid and GuildMarketDB.auctions[aid]
+            if a and not a.closed and a.seller==sn then
+                a.bids=a.bids or {}
+                for i=3,#p do
+                    local name,amt,bts=p[i]:match("^([^:]+):(%d+):(%d+)$")
+                    if name then
+                        amt=tonumber(amt); bts=tonumber(bts)
+                        local old=a.bids[name]
+                        if not old or amt>(old.amt or 0) then a.bids[name]={amt=amt,ts=bts} end
+                    end
+                end
                 if RefreshLootFrame then RefreshLootFrame() end
             end; return
         end
@@ -2510,11 +3249,11 @@ ev:SetScript("OnEvent",function(self,event,...)
             local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
             local aid,winner,amt,nb,ets=p[2],p[3],tonumber(p[4]),tonumber(p[5]),tonumber(p[6])
             local a=aid and GuildMarketDB.auctions[aid]
-            if a and not a.closed then
+            if a and not a.closed and IsAucSenderAuthorized(a,sn) then
                 a.closed=true; a.closedAt=time()
                 if winner and winner~="-" then
                     a.winner=winner; a.winAmt=amt or 0
-                    if nb then ApplyDKP(winner,nb,ets) end
+                    if nb and ets then ApplyDKP(winner,nb,ets) end
                     print(T.."[GuildMarkt]"..X.." "..Gr..winner..X.." "..L.AUC_WON..": "..W..(a.item or "?")..X.." ("..G..(amt or 0)..X..")")
                 end
                 if RefreshLootFrame then RefreshLootFrame() end
@@ -2523,7 +3262,7 @@ ev:SetScript("OnEvent",function(self,event,...)
         if msg:sub(1,6)=="AUCDEL" then
             local aid=msg:sub(8)
             local a=aid and GuildMarketDB.auctions[aid]
-            if a and a.seller==sn then
+            if a and IsAucSenderAuthorized(a,sn) then
                 GuildMarketDB.auctions[aid]=nil
                 if RefreshLootFrame then RefreshLootFrame() end
             end; return
@@ -2547,6 +3286,36 @@ ev:SetScript("OnEvent",function(self,event,...)
         end
         -- ── Kalender-Protokoll ──────────────────────────────────
         if msg=="EVTREQ" then BroadcastEvents(); return end
+        if msg:sub(1,6)=="EVTROS" then
+            -- Roster-Snapshot des Erstellers: ersetzt die lokale Teilnehmerliste komplett
+            local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
+            local eid,flag=p[2],p[3]
+            local ev2=eid and GuildMarketDB.events and GuildMarketDB.events[eid]
+            if ev2 and ev2.creator==sn and flag then
+                rosStaging[sn]=rosStaging[sn] or {}
+                if flag=="B" or flag=="F" then rosStaging[sn][eid]={} end
+                local stage=rosStaging[sn][eid]
+                if stage then
+                    for i=4,#p do
+                        local name,role,class,rts,conf=p[i]:match("^([^:]+):([^:]*):([^:]*):(%d+):(%d)$")
+                        if name then stage[name]={role=role,class=class,ts=tonumber(rts),confirmed=(conf=="1") or nil} end
+                    end
+                    if flag=="E" or flag=="F" then
+                        -- eigenes frisches Signup nicht verlieren (Snapshot koennte aelter sein)
+                        local me2=UnitName("player")
+                        local old=ev2.signups or {}
+                        local mine=old[me2]
+                        if type(mine)=="table" and (not stage[me2] or (mine.ts or 0)>(stage[me2].ts or 0)) then stage[me2]=mine end
+                        -- confirmed ist monoton: lokal bestaetigte bleiben bestaetigt (verhindert Doppelvergabe)
+                        for name,s in pairs(stage) do
+                            if type(old[name])=="table" and old[name].confirmed then s.confirmed=true end
+                        end
+                        ev2.signups=stage; rosStaging[sn][eid]=nil
+                        if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+                    end
+                end
+            end; return
+        end
         if msg:sub(1,9)=="EVTUNSIGN" then
             local eid=msg:sub(11)
             if eid and GuildMarketDB.events and GuildMarketDB.events[eid] then
@@ -2575,9 +3344,15 @@ ev:SetScript("OnEvent",function(self,event,...)
         end
         if msg:sub(1,6)=="EVTDEL" then
             local eid=msg:sub(8)
-            if eid and GuildMarketDB.events and GuildMarketDB.events[eid] then
-                GuildMarketDB.events[eid]=nil
-                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+            local ev2=eid and GuildMarketDB.events and GuildMarketDB.events[eid]
+            if ev2 then
+                -- Nur Ersteller oder laut Roster berechtigter Rang darf fremde Events loeschen
+                local r=GetMemberRank(sn)
+                local authorized=ev2.creator==sn or (r~=nil and (r==0 or r<=((GuildMarketDB.config and GuildMarketDB.config.eventDeleteRank) or 9)))
+                if authorized then
+                    GuildMarketDB.events[eid]=nil
+                    if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+                end
             end; return
         end
         local action,id,entry=Deserialize(msg)
@@ -2591,18 +3366,28 @@ end)
 -- ============================================================
 -- Toggle & Slash
 -- ============================================================
-local function Toggle()
+function GM_Toggle()
     if not mainFrame then BuildUI() end
     if mainFrame:IsShown() then mainFrame:Hide()
     else mainFrame:ClearAllPoints(); mainFrame:SetPoint("CENTER",UIParent,"CENTER",0,0)
         if GuildRoster then GuildRoster() end; PruneExpired(); PruneExpiredEvents()
         if currentMode=="CALENDAR" then RefreshCalendar() else RefreshList() end
+        GM_UpdateMerchButton()
         mainFrame:Show()
     end
+end
+function GM_OpenCalendar()
+    if not mainFrame then BuildUI() end
+    if not mainFrame:IsShown() then
+        mainFrame:ClearAllPoints(); mainFrame:SetPoint("CENTER",UIParent,"CENTER",0,0)
+        if GuildRoster then GuildRoster() end; PruneExpired(); PruneExpiredEvents()
+        mainFrame:Show()
+    end
+    if GM_ActivateCalendarMode then GM_ActivateCalendarMode() end
 end
 SLASH_GUILDMARKET1="/gmarkt"; SLASH_GUILDMARKET2="/gildenmarkt"
 SlashCmdList["GUILDMARKET"]=function(msg)
     if msg=="sync" then GM_RequestSync(); print(T.."[GuildMarkt]"..X.." Sync angefordert.")
     elseif msg=="config" then if not mainFrame then BuildUI() end; GM_BuildConfigFrame()
-    else Toggle() end
+    else GM_Toggle() end
 end

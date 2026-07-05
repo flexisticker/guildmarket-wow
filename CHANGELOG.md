@@ -5,6 +5,27 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [0.9.12-alpha] · 2026-07-05 · Raids, Merch-Shop, Fraktions-Filter, Sync-Härtung, Komfort
+
+### Added
+- **Raid-Events**: Instanz-Dropdown zweistufig (Dungeons/Raids-Untermenüs); 16 Raids (Kara bis Sunwell + Classic) mit automatischer Rollen-Vorbefüllung nach Raid-Größe (10er 2/3/5, 25er 3/6/16, 40er 4/10/26)
+- **Auto-Titel**: leerer Titel + gewählte Instanz → Instanzname wird Titel
+- **Fraktions-Erkennung**: fraktions-exklusive Dungeons (Verlies/Flammenschlund) werden automatisch nach `UnitFactionGroup` gefiltert (Ziehdienst + Kalender)
+- **Merch-Shop**: „Shop"-Button; Artikel anlegen (Freitext/Item-Drag, Preis in Punkten, Bestand, 0=unbegrenzt), Kauf mit Punkteabzug, Ausverkauft-Status
+- **Kauf-Verwaltung**: Bestellungen mit Gildenchat-Ankündigung (zufällige Sprüche), Shop-Button-Highlight „Shop (N)", Offene-Käufe-Sektion mit Online-Dot, Flüstern + „Übergeben"-Bestätigung (Verkäufer/merchRank), Tombstone-Sync gegen Geister-Bestellungen
+- **Event-Ankündigung**: Checkbox „Im Gildenchat ankündigen" beim Erstellen + automatische 1h-Erinnerung im Gildenchat (nur Ersteller-Client, genau einmal)
+- **Minimap-Button** (Links: Markt, Rechts: Kalender, ziehbar), **Login-Erinnerung** an heutige Events, **Addon-Logo** (IconTexture)
+- **DKP**: Suche + „Nur Online"-Filter in der Punkteliste (skaliert für große Gilden), manuelle +/−-Anpassung mit eigenem Rang (`dkpAdjustRank`)
+- **Neue Config-Ränge**: Punkte anpassen, Merch anlegen (Config-Fenster jetzt 10 Rang-Dropdowns)
+- **Sprachneutrale Instanz-Codes** im Event-Protokoll (D:i/R:i) — DE/EN-Clients sehen Instanzen in ihrer Sprache
+
+### Fixed
+- **Eigene Addon-Nachrichten werden übersprungen** — behebt doppelten Bestands-Abzug beim Merch-Kauf und doppelte Sync-Antworten beim Login
+- **Sync-Härtung**: Event-Ersteller verteilt komplette Teilnehmerlisten (EVTROS-Snapshots, erfasst Offline-Anmeldungen UND -Abmeldungen); Verkäufer relayed Auktions-Gebote; Auktion-Beenden/Abbrechen durch Offiziere wird jetzt überall anerkannt; AUCEND/AUCDEL/EVTDEL mit Absender-Autorisierung; confirmed-Flag monoton (keine Doppelvergabe)
+- **Deutsche Dungeon-Namen korrigiert** (Flammenschlund, Höhlen des Wehklagens, Das Verlies, Düsterbruch …), Tiefschwarze Grotte ergänzt, Mindestlevel realistisch
+
+---
+
 ## [0.9.11-beta] · 2026-07-02 · Monatskalender, Rollen-Signup, DKP-System, Loot-Auktion
 
 ### Added
