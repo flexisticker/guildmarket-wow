@@ -5,6 +5,16 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [1.0.0-beta] · 2026-07-05 · Beta-Promotion mit Versionssprung
+
+Der Funktionsumfang ist komplett: Marktplatz, Gilden-Kalender (Dungeons & Raids), DKP-System, Loot-Auktion, Merch-Shop mit Bestell-Verwaltung und das volle Rechte-System — Zeit für die 1.0!
+
+### Changed
+- Inhaltlich identisch mit 0.9.12-alpha, jetzt im Beta-Channel
+- `.pkgmeta`: CURSEFORGE_DESCRIPTION*.md aus dem Release-ZIP ausgeschlossen
+
+---
+
 ## [0.9.12-alpha] · 2026-07-05 · Raids, Merch-Shop, Fraktions-Filter, Sync-Härtung, Komfort
 
 ### Added
