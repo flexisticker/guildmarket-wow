@@ -5,6 +5,14 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [1.0.1-beta] · 2026-07-10 · Interface-Update für WoW-Patch 2.5.6
+
+### Changed
+- TOC-Interface für TBC Classic Anniversary auf **20506** angehoben (Patch 2.5.6) — Addon wurde als „veraltet" angezeigt
+- Classic Era bleibt bei 11508
+
+---
+
 ## [1.0.0-beta] · 2026-07-05 · Beta-Promotion mit Versionssprung
 
 Der Funktionsumfang ist komplett: Marktplatz, Gilden-Kalender (Dungeons & Raids), DKP-System, Loot-Auktion, Merch-Shop mit Bestell-Verwaltung und das volle Rechte-System — Zeit für die 1.0!
