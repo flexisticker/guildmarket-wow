@@ -5,6 +5,15 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [1.0.2-beta] · 2026-07-11 · Zuverlässige Addon-Nutzer-Erkennung
+
+### Added
+- **Presence-Handshake**: Beim Login sendet jeder Client ein HELLO, Empfänger antworten gedrosselt mit HI — damit sehen sich alle Addon-Nutzer gegenseitig, auch „stille" ohne eigene Einträge
+- **Persistente Nutzerliste**: Erkannte Nutzer werden mit „zuletzt gesehen"-Zeitstempel in den SavedVariables gespeichert; der Zähler startet nach Relog mit allen Nutzern der letzten 14 Tage (Einträge >60 Tage werden vergessen)
+- **`/gmarkt users`** (bzw. `/gmarkt nutzer`): listet alle bekannten Addon-Nutzer im Chat — grün = online, mit „vor X Min/h/Tagen"
+
+---
+
 ## [1.0.1-beta] · 2026-07-10 · Interface-Update für WoW-Patch 2.5.6
 
 ### Changed

@@ -535,6 +535,7 @@ local function InitDB()
     if not GuildMarketDB.merch then GuildMarketDB.merch={} end
     if not GuildMarketDB.merchOrders then GuildMarketDB.merchOrders={} end
     if not GuildMarketDB.merchDone then GuildMarketDB.merchDone={} end
+    if not GuildMarketDB.addonUsersSeen then GuildMarketDB.addonUsersSeen={} end
     -- Migration v2: alle Rechte auf "jeder" zuruecksetzen (fruehere Defaults waren Offizier)
     if (GuildMarketDB.config.cfgVer or 0)<2 then
         GuildMarketDB.config.eventConfirmRank=9; GuildMarketDB.config.guildEventRank=9; GuildMarketDB.config.cfgVer=2
@@ -993,6 +994,27 @@ local currentFilter="ALL"; local searchText=""
 local currentMode="LIST"; local selectedEventId=nil
 local calViewYear, calViewMonth
 do local t=date("*t"); calViewYear,calViewMonth=t.year,t.month end
+
+-- Addon-Nutzer erfassen: Session-Set + persistente "zuletzt gesehen"-Liste (SavedVariables)
+local function MarkAddonUser(name)
+    addonUsers[name]=true
+    if GuildMarketDB and GuildMarketDB.addonUsersSeen then GuildMarketDB.addonUsersSeen[name]=time() end
+end
+function GM_UpdateUserCount()
+    if not userCountText then return end
+    local n=0; for _ in pairs(addonUsers) do n=n+1 end
+    userCountText:SetText(G..n..X..Dg.." "..L.COUNT_USERS..X)
+end
+-- Beim Login: bekannte Nutzer der letzten 14 Tage vorladen (Zaehler startet nicht bei 1),
+-- Eintraege aelter als 60 Tage vergessen
+local function LoadKnownAddonUsers()
+    if not GuildMarketDB or not GuildMarketDB.addonUsersSeen then return end
+    local now=time()
+    for name,ts in pairs(GuildMarketDB.addonUsersSeen) do
+        if ts+60*86400<now then GuildMarketDB.addonUsersSeen[name]=nil
+        elseif ts+14*86400>=now then addonUsers[name]=true end
+    end
+end
 
 -- Shop-Button-Highlight: zeigt Anzahl offener Kaeufe, die ich bestaetigen kann
 function GM_UpdateMerchButton()
@@ -2364,7 +2386,7 @@ local function BuildUI()
 
     userCountText=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     userCountText:SetPoint("RIGHT",f.InsetBg,"TOPRIGHT",-42,-32)
-    userCountText:SetText(G.."1"..X..Dg.." "..L.COUNT_USERS..X)
+    GM_UpdateUserCount()
 
     local syncBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     syncBtn:SetSize(80,22); syncBtn:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-38,-24)
@@ -3091,13 +3113,15 @@ local function PrintTodaysEvents()
 end
 
 local rosStaging={}  -- EVTROS-Chunks pro Absender/Event bis zum Commit
+local lastHiSent=0   -- HI-Antworten drosseln (eine Antwort deckt mehrere HELLOs ab)
 local ev=CreateFrame("Frame","GuildMarketEventFrame",UIParent)
 ev:RegisterEvent("PLAYER_LOGIN"); ev:RegisterEvent("CHAT_MSG_ADDON"); ev:RegisterEvent("GUILD_ROSTER_UPDATE")
 ev:SetScript("OnEvent",function(self,event,...)
     if event=="PLAYER_LOGIN" then
         InitDB(); PruneExpired(); PruneExpiredEvents(); PruneAuctions(); PruneMerchOrders(); if GuildRoster then GuildRoster() end
-        local me=UnitName("player"); if me then addonUsers[me]=true end
-        DelayCall(6,function() BroadcastMine(); GM_RequestSync(); BroadcastEvents(); SendGuild("EVTREQ"); SendGuild("DKPREQ"); SendGuild("AUCREQ"); SendGuild("MSHREQ") end)
+        local me=UnitName("player"); if me then MarkAddonUser(me) end
+        LoadKnownAddonUsers(); GM_UpdateUserCount()
+        DelayCall(6,function() SendGuild("HELLO"); BroadcastMine(); GM_RequestSync(); BroadcastEvents(); SendGuild("EVTREQ"); SendGuild("DKPREQ"); SendGuild("AUCREQ"); SendGuild("MSHREQ") end)
         CreateMinimapButton()
         DelayCall(12,PrintTodaysEvents)
         print(T.."[GuildMarkt]"..X.." "..L.MSG_LOADED.." — "..G.."/gmarkt"..X.." | "..Dg..(GetGuildInfo("player") or "")..X)
@@ -3106,11 +3130,17 @@ ev:SetScript("OnEvent",function(self,event,...)
     elseif event=="CHAT_MSG_ADDON" then
         local prefix,msg,_,sender=...
         if prefix~=MSG_PREFIX then return end
-        local sn=sender:match("^([^%-]+)") or sender; addonUsers[sn]=true
-        if userCountText then local n=0; for _ in pairs(addonUsers) do n=n+1 end; userCountText:SetText(G..n..X..Dg.." "..L.COUNT_USERS..X) end
+        local sn=sender:match("^([^%-]+)") or sender; MarkAddonUser(sn); GM_UpdateUserCount()
         -- Eigene Nachrichten ueberspringen: lokal wurde bereits alles angewendet
         -- (verhindert u.a. doppelten Bestand-Abzug beim Merch-Kauf und Antworten auf eigene REQs)
         if sn==UnitName("player") then return end
+        -- Presence-Handshake: HELLO beim Login, Empfaenger melden sich mit HI zurueck
+        -- (gedrosselt, damit ein Login-Schwung nicht n*n Antworten ausloest)
+        if msg=="HELLO" then
+            if time()-lastHiSent>60 then lastHiSent=time(); SendGuild("HI") end
+            return
+        end
+        if msg=="HI" then return end
         if msg=="REQ" then BroadcastMine(); return end
         if msg:sub(1,3)=="CFG" then
             -- Nur akzeptieren, wenn der Absender laut Roster GM oder freigegebener Config-Rang ist
@@ -3389,5 +3419,19 @@ SLASH_GUILDMARKET1="/gmarkt"; SLASH_GUILDMARKET2="/gildenmarkt"
 SlashCmdList["GUILDMARKET"]=function(msg)
     if msg=="sync" then GM_RequestSync(); print(T.."[GuildMarkt]"..X.." Sync angefordert.")
     elseif msg=="config" then if not mainFrame then BuildUI() end; GM_BuildConfigFrame()
+    elseif msg=="users" or msg=="nutzer" then
+        -- Bekannte Addon-Nutzer mit "zuletzt gesehen" ausgeben
+        local list={}
+        for name,ts in pairs((GuildMarketDB and GuildMarketDB.addonUsersSeen) or {}) do list[#list+1]={name=name,ts=ts} end
+        table.sort(list,function(a,b) return a.ts>b.ts end)
+        print(T.."[GuildMarkt]"..X.." "..G..#list..X..Dg.." "..L.COUNT_USERS..":"..X)
+        local now=time()
+        for _,e in ipairs(list) do
+            local d=now-e.ts; local ago
+            if d<3600 then ago=(isDE and "vor " or "")..math.floor(d/60)..(isDE and " Min" or " min ago")
+            elseif d<86400 then ago=(isDE and "vor " or "")..math.floor(d/3600).."h"..(isDE and "" or " ago")
+            else ago=(isDE and "vor " or "")..math.floor(d/86400)..(isDE and " Tagen" or " days ago") end
+            print("  "..(IsOnline(e.name) and Gr or W)..e.name..X..Dg.." — "..ago..X)
+        end
     else GM_Toggle() end
 end
