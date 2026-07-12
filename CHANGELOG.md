@@ -5,6 +5,21 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [1.1.0-beta] · 2026-07-12 · Gilden-Werkzeuge
+
+### Added
+- **Wiederkehrende Events**: Dropdown „Einmalig / Wöchentlich / Alle 2 Wochen" beim Erstellen; der Ersteller-Client legt 1h nach Eventstart automatisch den Folgetermin an (inkl. Rollen-Slots, Punkten, Instanz und Gildenchat-Ankündigung); „(wiederholt sich)"-Hinweis im Detail-Popup
+- **Berufe-Verzeichnis**: „Berufe"-Button — eigene Berufe werden beim Login automatisch aus den Skill-Zeilen erkannt und sprachneutral gesynct (DE/EN-Index); Fenster mit Suche (Name oder Beruf), Online-Status und Flüstern; Einträge >60 Tage werden vergessen
+- **Anwesenheits-Statistik**: jede bestätigte Event-Teilnahme zählt einen dauerhaften Zähler hoch (übersteht das 24h-Event-Pruning); neue „Events"-Spalte im Punkte-Fenster; Sync als 4. DKPSYNC-Feld mit max()-Merge (monotoner Zähler)
+- **DKP-Verfall (konfigurierbar)**: „Verfall in % (0=aus)" + „alle X Tage" im Config-Fenster; ausgeführt ausschließlich vom GM-Client beim Login (authoritativ, Catch-up bis 12 Perioden), danach Sync + Ankündigung
+- **Schwarzes Brett**: „Brett"-Button — eine Ankündigung der Gildenleitung (bis 600 Zeichen, chunked übertragen); ungelesene Ankündigung erscheint beim Login als Popup mit „Verstanden"-Merker; Schreibrecht über neuen Rang „Brett schreiben ab" (Standard: jeder), empfangsseitig Roster-geprüft
+- **Config**: 11. Rang-Dropdown (Brett) + 2 Verfall-Felder; Fenster 700×560; CFG-Protokoll Felder 13–16
+
+### Changed
+- Upvalue-Refactor: `RefreshList`/`RefreshCalendar` als `GM_`-Globals (BuildUI 50/60)
+
+---
+
 ## [1.0.2-beta] · 2026-07-11 · Zuverlässige Addon-Nutzer-Erkennung
 
 ### Added

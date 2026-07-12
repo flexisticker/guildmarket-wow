@@ -190,6 +190,33 @@ local L = {
                         or  "New event: '%s' on %s at %s%s — sign up in the guild market (/gmarkt)!",
     CAL_CHAT_REM = isDE and "Erinnerung: '%s' startet um %s (in ca. 1 Stunde)! Anmeldungen: %d — jetzt noch eintragen: /gmarkt"
                         or  "Reminder: '%s' starts at %s (in about 1 hour)! Signups: %d — join now: /gmarkt",
+    -- Wiederkehrende Events
+    REP_NONE     = isDE and "Einmalig"          or "One-time",
+    REP_WEEKLY   = isDE and "Woechentlich"      or "Weekly",
+    REP_BIWEEKLY = isDE and "Alle 2 Wochen"     or "Every 2 weeks",
+    REP_CREATED  = isDE and "Naechster Termin automatisch angelegt:" or "Next occurrence auto-created:",
+    REP_HINT     = isDE and "(wiederholt sich)" or "(recurring)",
+    -- Anwesenheit
+    DKP_ATT_HDR  = isDE and "Events"            or "Events",
+    -- DKP-Verfall
+    CFG_DECAYPCT = isDE and "DKP-Verfall in % (0=aus):" or "DKP decay % (0=off):",
+    CFG_DECAYDAYS= isDE and "Verfall alle X Tage:"      or "Decay every X days:",
+    DECAY_DONE   = isDE and "DKP-Verfall angewendet: -%d%% auf alle Konten." or "DKP decay applied: -%d%% on all balances.",
+    -- Berufe-Verzeichnis
+    PROF_TITLE   = isDE and "Berufe-Verzeichnis" or "Profession Directory",
+    PROF_BTN     = isDE and "Berufe"             or "Profs",
+    PROF_EMPTY   = isDE and "Noch keine Berufe erfasst. Berufe werden beim Login automatisch erkannt." or "No professions registered yet. Professions are detected automatically at login.",
+    PROF_SEARCH  = isDE and "Suchen..."          or "Search...",
+    -- Schwarzes Brett
+    BRD_TITLE    = isDE and "Schwarzes Brett"    or "Guild Board",
+    BRD_BTN      = isDE and "Brett"              or "Board",
+    BRD_SAVE     = isDE and "Veroeffentlichen"   or "Publish",
+    BRD_EMPTY    = isDE and "Keine Ankuendigung vorhanden." or "No announcement.",
+    BRD_BY       = isDE and "Von"                or "By",
+    BRD_OK       = isDE and "Verstanden"         or "Got it",
+    BRD_NORANK   = isDE and "Kein Zugriff — Rang zu niedrig fuer das Schwarze Brett." or "No access — rank too low for the guild board.",
+    BRD_POSTED   = isDE and "Ankuendigung veroeffentlicht." or "Announcement published.",
+    CFG_BRDRANK  = isDE and "Brett schreiben ab:" or "Board post rank:",
     ETYPE_DUNGEON= isDE and "Dungeon-Event"     or "Dungeon Event",
     ETYPE_GUILD  = isDE and "Gilden-Event"      or "Guild Event",
     CAL_POINTS   = isDE and "Punkte:"           or "Points:",
@@ -372,6 +399,19 @@ local function TokenToInstance(tok)
     return tok
 end
 
+-- Berufe fuer das Verzeichnis: DE/EN parallel sortiert (Index = sprachneutraler Token).
+-- Namen muessen EXAKT den Skill-Zeilen des Clients entsprechen (GetSkillLineInfo-Match),
+-- daher hier mit echten Umlauten.
+local PROF_NAMES = isDE and {
+    "Alchimie", "Schmiedekunst", "Verzauberkunst", "Ingenieurskunst",
+    "Kräuterkunde", "Juwelenschleifen", "Lederverarbeitung", "Bergbau",
+    "Schneiderei", "Kürschnerei", "Kochkunst", "Erste Hilfe", "Angeln",
+} or {
+    "Alchemy", "Blacksmithing", "Enchanting", "Engineering",
+    "Herbalism", "Jewelcrafting", "Leatherworking", "Mining",
+    "Tailoring", "Skinning", "Cooking", "First Aid", "Fishing",
+}
+
 -- Klassen/Rollen fuer Event-Signup (TBC Classic: keine Death Knights/Monks)
 local CLASS_TOKENS = {"WARRIOR","PALADIN","HUNTER","ROGUE","PRIEST","SHAMAN","MAGE","WARLOCK","DRUID"}
 local ROLE_TOKENS = {"TANK","HEAL","DPS"}
@@ -536,6 +576,12 @@ local function InitDB()
     if not GuildMarketDB.merchOrders then GuildMarketDB.merchOrders={} end
     if not GuildMarketDB.merchDone then GuildMarketDB.merchDone={} end
     if not GuildMarketDB.addonUsersSeen then GuildMarketDB.addonUsersSeen={} end
+    if not GuildMarketDB.attendance then GuildMarketDB.attendance={} end
+    if not GuildMarketDB.profs then GuildMarketDB.profs={} end
+    if not GuildMarketDB.config.boardRank then GuildMarketDB.config.boardRank=9 end
+    if not GuildMarketDB.config.dkpDecayPercent then GuildMarketDB.config.dkpDecayPercent=0 end
+    if not GuildMarketDB.config.dkpDecayDays then GuildMarketDB.config.dkpDecayDays=7 end
+    if not GuildMarketDB.config.dkpLastDecay then GuildMarketDB.config.dkpLastDecay=time() end
     -- Migration v2: alle Rechte auf "jeder" zuruecksetzen (fruehere Defaults waren Offizier)
     if (GuildMarketDB.config.cfgVer or 0)<2 then
         GuildMarketDB.config.eventConfirmRank=9; GuildMarketDB.config.guildEventRank=9; GuildMarketDB.config.cfgVer=2
@@ -579,7 +625,7 @@ end
 local function Broadcast(id,e)   SendGuild(Serialize("POST",id,e)) end
 function GM_DeleteListing(id) GuildMarketDB.listings[id]=nil; SendGuild("DEL|"..id) end
 function GM_RequestSync()     SendGuild("REQ") end
-local function BroadcastConfig() local c=GuildMarketDB.config; SendGuild("CFG|"..c.postRank.."|"..c.deleteRank.."|"..(c.eventRank or 9).."|"..(c.eventDeleteRank or 9).."|"..(c.dkpPerEvent or 10).."|"..(c.eventConfirmRank or 9).."|"..(c.guildEventRank or 9).."|"..(c.configRank or 0).."|"..(c.auctionRank or 9).."|"..(c.dkpAdjustRank or 9).."|"..(c.merchRank or 9)) end
+local function BroadcastConfig() local c=GuildMarketDB.config; SendGuild("CFG|"..c.postRank.."|"..c.deleteRank.."|"..(c.eventRank or 9).."|"..(c.eventDeleteRank or 9).."|"..(c.dkpPerEvent or 10).."|"..(c.eventConfirmRank or 9).."|"..(c.guildEventRank or 9).."|"..(c.configRank or 0).."|"..(c.auctionRank or 9).."|"..(c.dkpAdjustRank or 9).."|"..(c.merchRank or 9).."|"..(c.boardRank or 9).."|"..(c.dkpDecayPercent or 0).."|"..(c.dkpDecayDays or 7).."|"..(c.dkpLastDecay or 0)) end
 
 -- ============================================================
 -- DKP-Punktekonto (Sync: neuester Zeitstempel pro Spieler gewinnt)
@@ -596,11 +642,37 @@ local function BroadcastDKP()
     if not GuildMarketDB or not GuildMarketDB.dkp then return end
     local parts={}; local len=8
     for name,d in pairs(GuildMarketDB.dkp) do
-        local seg=name..":"..(d.bal or 0)..":"..(d.ts or 0)
+        local seg=name..":"..(d.bal or 0)..":"..(d.ts or 0)..":"..((GuildMarketDB.attendance and GuildMarketDB.attendance[name]) or 0)
         if len+#seg+1>240 then SendGuild("DKPSYNC|"..table.concat(parts,"|")); parts={}; len=8 end
         parts[#parts+1]=seg; len=len+#seg+1
     end
     if #parts>0 then SendGuild("DKPSYNC|"..table.concat(parts,"|")) end
+end
+
+-- DKP-Verfall: fuehrt NUR der GM-Client aus (authoritativ, kein Doppel-Verfall).
+-- Konfigurierbar: dkpDecayPercent (0=aus) alle dkpDecayDays Tage; Catch-up bei
+-- laengerer Abwesenheit (max. 12 Perioden), danach Sync + Config-Broadcast.
+local function CheckDkpDecay()
+    if not IsGM() then return end
+    if not GuildMarketDB or not GuildMarketDB.config then return end
+    local c=GuildMarketDB.config
+    local pct=tonumber(c.dkpDecayPercent) or 0
+    local days=tonumber(c.dkpDecayDays) or 7
+    if pct<=0 or pct>=100 or days<1 then return end
+    local now=time(); local interval=days*86400
+    local applied=0
+    while (c.dkpLastDecay or now)+interval<=now and applied<12 do
+        for name,d in pairs(GuildMarketDB.dkp or {}) do
+            d.bal=math.floor((d.bal or 0)*(100-pct)/100); d.ts=now
+        end
+        c.dkpLastDecay=(c.dkpLastDecay or now)+interval
+        applied=applied+1
+    end
+    if applied>0 then
+        c.dkpLastDecay=now -- Drift vermeiden, ab jetzt frisch zaehlen
+        BroadcastDKP(); BroadcastConfig()
+        print(T.."[GuildMarkt]"..X.." "..string.format(L.DECAY_DONE,pct)..(applied>1 and (" (x"..applied..")") or ""))
+    end
 end
 
 -- ============================================================
@@ -923,6 +995,7 @@ local function ConfirmAttendance(eventId,player)
     local s=ev.signups and ev.signups[player]
     if type(s)~="table" or s.confirmed then return end
     s.confirmed=true
+    GuildMarketDB.attendance[player]=(GuildMarketDB.attendance[player] or 0)+1
     local per=tonumber(ev.points) or 0
     local ts=time()
     local newBal=GetDKP(player)+per
@@ -1014,6 +1087,107 @@ local function LoadKnownAddonUsers()
         if ts+60*86400<now then GuildMarketDB.addonUsersSeen[name]=nil
         elseif ts+14*86400>=now then addonUsers[name]=true end
     end
+end
+
+-- ============================================================
+-- Berufe-Verzeichnis: Auto-Scan der eigenen Skill-Zeilen + Sync
+-- (jeder Spieler ist nur fuer die eigenen Berufe autoritativ)
+-- ============================================================
+local function BroadcastMyProfs()
+    local me=UnitName("player")
+    local p=GuildMarketDB and GuildMarketDB.profs and GuildMarketDB.profs[me]
+    if not p or not p.s or not next(p.s) then return end
+    local parts={}
+    for idx,rank in pairs(p.s) do parts[#parts+1]=idx..":"..rank end
+    SendGuild("PROFSET|"..table.concat(parts,"|"))
+end
+local function ScanOwnProfs()
+    if not GetNumSkillLines or not GuildMarketDB then return end
+    local me=UnitName("player"); if not me then return end
+    local mine={}
+    for i=1,GetNumSkillLines() do
+        local sname,isHeader,_,rank=GetSkillLineInfo(i)
+        if sname and not isHeader then
+            for idx,pn in ipairs(PROF_NAMES) do
+                if pn==sname then mine[idx]=rank or 0 end
+            end
+        end
+    end
+    if next(mine) then
+        GuildMarketDB.profs[me]={s=mine,ts=time()}
+        BroadcastMyProfs()
+    end
+end
+local function PruneProfs()
+    if not GuildMarketDB or not GuildMarketDB.profs then return end
+    local now=time()
+    for name,p in pairs(GuildMarketDB.profs) do
+        if (p.ts or 0)+60*86400<now then GuildMarketDB.profs[name]=nil end
+    end
+end
+
+-- ============================================================
+-- Schwarzes Brett: eine Ankuendigung der Gildenleitung, Login-Popup mit Gelesen-Merker
+-- ============================================================
+local RefreshBoardFrame -- forward-declared, in GM_BuildBoardFrame gesetzt
+local function CanPostBoard()
+    if IsGM() then return true end
+    if not GuildMarketDB or not GuildMarketDB.config then return true end
+    return playerRankIndex<=(GuildMarketDB.config.boardRank or 9)
+end
+-- Chunks wie beim Event-Roster: F = einzige Nachricht, B/M/E = Beginn/Mitte/Ende
+local function BroadcastBoard()
+    local b=GuildMarketDB and GuildMarketDB.board
+    if not b or not b.text or b.text=="" then return end
+    local text=b.text
+    local chunks={}
+    while #text>0 do
+        chunks[#chunks+1]=text:sub(1,170); text=text:sub(171)
+    end
+    for i,c in ipairs(chunks) do
+        local flag=(#chunks==1 and "F") or (i==1 and "B") or (i==#chunks and "E") or "M"
+        SendGuild("BRDPOST|"..(b.ts or 0).."|"..(b.author or "?").."|"..flag.."|"..c)
+    end
+end
+local function PostBoard(text)
+    if not CanPostBoard() then print(R.."[GuildMarkt]"..X.." "..L.BRD_NORANK); return end
+    text=(text or ""):gsub("|",""):sub(1,600)
+    GuildMarketDB.board={text=text,author=UnitName("player"),ts=time()}
+    GuildMarketDB.boardRead=GuildMarketDB.board.ts -- eigene Ankuendigung gilt als gelesen
+    BroadcastBoard()
+    print(T.."[GuildMarkt]"..X.." "..L.BRD_POSTED)
+end
+-- Login-Popup: ungelesene Ankuendigung anzeigen
+local boardPopup
+local function ShowBoardPopup()
+    local b=GuildMarketDB and GuildMarketDB.board
+    if not b or not b.text or b.text=="" then return end
+    if (b.ts or 0)<=(GuildMarketDB.boardRead or 0) then return end
+    if boardPopup then boardPopup:Hide(); boardPopup=nil end
+    local f=CreateFrame("Frame","GuildMarketBoardPopup",UIParent,"BasicFrameTemplateWithInset")
+    f:SetSize(420,240); f:SetPoint("CENTER",UIParent,"CENTER",0,120)
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
+    f:SetFrameStrata("DIALOG"); f:SetFrameLevel(40)
+    f.TitleBg:SetHeight(26)
+    local titleFS=f:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+    titleFS:SetPoint("CENTER",f.TitleBg,"CENTER",0,1); titleFS:SetText(G..L.BRD_TITLE..X)
+    local meta=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    meta:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-8)
+    meta:SetText(Dg..L.BRD_BY.." "..X..W..(b.author or "?")..X..Dg.." — "..date("%d.%m.%Y %H:%M",b.ts or 0)..X)
+    local sfB=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+    sfB:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",8,-26); sfB:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-28,36)
+    local scB=CreateFrame("Frame",nil,sfB); scB:SetWidth(360); scB:SetHeight(20); sfB:SetScrollChild(scB)
+    local txt=scB:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    txt:SetPoint("TOPLEFT",scB,"TOPLEFT",4,-4); txt:SetWidth(350); txt:SetJustifyH("LEFT"); txt:SetJustifyV("TOP")
+    txt:SetText(W..b.text..X); scB:SetHeight(math.max(20,txt:GetStringHeight()+10))
+    local okBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); okBtn:SetSize(120,24)
+    okBtn:SetPoint("BOTTOM",f.InsetBg,"BOTTOM",0,6); okBtn:SetText(L.BRD_OK)
+    okBtn:SetScript("OnClick",function()
+        GuildMarketDB.boardRead=b.ts or time()
+        f:Hide(); boardPopup=nil
+    end)
+    boardPopup=f; f:Show()
 end
 
 -- Shop-Button-Highlight: zeigt Anzahl offener Kaeufe, die ich bestaetigen kann
@@ -1276,7 +1450,7 @@ end
 function GM_BuildConfigFrame()
     if configFrame then configFrame:Show(); return end
     local f=CreateFrame("Frame","GuildMarketConfigFrame",UIParent,"BasicFrameTemplateWithInset")
-    f:SetSize(700,480); f:SetPoint("CENTER",UIParent,"CENTER",0,0)
+    f:SetSize(700,560); f:SetPoint("CENTER",UIParent,"CENTER",0,0)
     f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
     f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
     f:SetFrameStrata("DIALOG"); f:SetFrameLevel(20); f:Hide()
@@ -1310,6 +1484,7 @@ function GM_BuildConfigFrame()
     local ddA=RankDD("Auc",350,-220,function() return GuildMarketDB.config.auctionRank or 9 end,function(v) GuildMarketDB.config.auctionRank=v end,G..L.CFG_AUCRANK..X)
     local ddDA=RankDD("DkpAdj",8,-282,function() return GuildMarketDB.config.dkpAdjustRank or 9 end,function(v) GuildMarketDB.config.dkpAdjustRank=v end,G..L.CFG_DKPADJRANK..X)
     local ddM=RankDD("Merch",350,-282,function() return GuildMarketDB.config.merchRank or 9 end,function(v) GuildMarketDB.config.merchRank=v end,G..L.CFG_MERCHRANK..X)
+    local ddB=RankDD("Board",350,-344,function() return GuildMarketDB.config.boardRank or 9 end,function(v) GuildMarketDB.config.boardRank=v end,G..L.CFG_BRDRANK..X)
     local lbDkp=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
     lbDkp:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",8,-348); lbDkp:SetText(G..L.CFG_DKPPER..X)
     local ebDkp=CreateFrame("EditBox","GuildMarketCfgDkpBox",f,"InputBoxTemplate")
@@ -1317,6 +1492,23 @@ function GM_BuildConfigFrame()
     ebDkp:SetAutoFocus(false); ebDkp:SetMaxLetters(4); ebDkp:SetNumeric(true)
     ebDkp:SetScript("OnTextChanged",function(self)
         local v=tonumber(self:GetText()); if v then GuildMarketDB.config.dkpPerEvent=v end
+    end)
+    -- DKP-Verfall: Prozent (0=aus) + Intervall in Tagen; ausgefuehrt vom GM-Client beim Login
+    local lbDecP=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    lbDecP:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",8,-410); lbDecP:SetText(G..L.CFG_DECAYPCT..X)
+    local ebDecP=CreateFrame("EditBox","GuildMarketCfgDecayPctBox",f,"InputBoxTemplate")
+    ebDecP:SetSize(50,22); ebDecP:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",200,-406)
+    ebDecP:SetAutoFocus(false); ebDecP:SetMaxLetters(2); ebDecP:SetNumeric(true)
+    ebDecP:SetScript("OnTextChanged",function(self)
+        local v=tonumber(self:GetText()); if v then GuildMarketDB.config.dkpDecayPercent=v end
+    end)
+    local lbDecD=f:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    lbDecD:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",350,-410); lbDecD:SetText(G..L.CFG_DECAYDAYS..X)
+    local ebDecD=CreateFrame("EditBox","GuildMarketCfgDecayDaysBox",f,"InputBoxTemplate")
+    ebDecD:SetSize(50,22); ebDecD:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",542,-406)
+    ebDecD:SetAutoFocus(false); ebDecD:SetMaxLetters(3); ebDecD:SetNumeric(true)
+    ebDecD:SetScript("OnTextChanged",function(self)
+        local v=tonumber(self:GetText()); if v and v>=1 then GuildMarketDB.config.dkpDecayDays=v end
     end)
     local i2=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); i2:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",270,18); i2:SetText(Dg.."Rang 0 = Gildenmeister  (niedrigere Zahl = hoehere Position)"..X)
     local sB=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); sB:SetSize(160,26); sB:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,12); sB:SetText("Speichern & Sync")
@@ -1326,13 +1518,17 @@ function GM_BuildConfigFrame()
         local canEdit=CanEditConfig()
         if not canEdit then sB:Disable(); hint:SetText(R..L.CFG_NOEDIT..X)
         else sB:Enable(); hint:SetText(Dg.."Einstellungen werden per Sync verteilt."..X) end
-        ddP:Refresh(); ddD:Refresh(); ddE:Refresh(); ddED:Refresh(); ddC:Refresh(); ddGE:Refresh(); ddCFG:Refresh(); ddA:Refresh(); ddDA:Refresh(); ddM:Refresh()
-        for _,dd in ipairs({ddP,ddD,ddE,ddED,ddC,ddGE,ddA,ddDA,ddM}) do
+        ddP:Refresh(); ddD:Refresh(); ddE:Refresh(); ddED:Refresh(); ddC:Refresh(); ddGE:Refresh(); ddCFG:Refresh(); ddA:Refresh(); ddDA:Refresh(); ddM:Refresh(); ddB:Refresh()
+        for _,dd in ipairs({ddP,ddD,ddE,ddED,ddC,ddGE,ddA,ddDA,ddM,ddB}) do
             if canEdit then UIDropDownMenu_EnableDropDown(dd) else UIDropDownMenu_DisableDropDown(dd) end
         end
         if IsGM() then UIDropDownMenu_EnableDropDown(ddCFG) else UIDropDownMenu_DisableDropDown(ddCFG) end
         ebDkp:SetText(tostring(GuildMarketDB.config.dkpPerEvent or 10))
-        ebDkp:EnableMouse(canEdit); if not canEdit then ebDkp:ClearFocus() end
+        ebDecP:SetText(tostring(GuildMarketDB.config.dkpDecayPercent or 0))
+        ebDecD:SetText(tostring(GuildMarketDB.config.dkpDecayDays or 7))
+        for _,eb in ipairs({ebDkp,ebDecP,ebDecD}) do
+            eb:EnableMouse(canEdit); if not canEdit then eb:ClearFocus() end
+        end
     end)
     configFrame=f; f:Show()
 end
@@ -1364,7 +1560,7 @@ local function UpdateHeaders()
     end
 end
 
-local function RefreshList()
+function GM_RefreshList()
     if not listContent then return end
     for _,r in ipairs(rows) do r:Hide() end
     local listings=GetFilteredListings()
@@ -1502,7 +1698,7 @@ local function RefreshList()
         row:SetScript("OnLeave",function(self) self.border:SetBackdropBorderColor(0.4,0.8,1,0); GameTooltip:Hide() end)
 
         if CanDeleteEntry(e) then
-            row.del:Show(); row.del:SetScript("OnClick",function() GM_DeleteListing(id); RefreshList() end)
+            row.del:Show(); row.del:SetScript("OnClick",function() GM_DeleteListing(id); GM_RefreshList() end)
             if e.contact~=me then row.del:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines(); GameTooltip:AddLine(R..L.TT_DELETE..X); GameTooltip:AddLine(Dg..L.TT_FROM..X..T..(e.contact or "")..X); GameTooltip:Show() end); row.del:SetScript("OnLeave",function() GameTooltip:Hide() end) end
         else row.del:Hide() end
 
@@ -1522,7 +1718,7 @@ local function RefreshList()
 end
 
 -- ============================================================
--- Kalender: RefreshCalendar + Event-Detail-Popup
+-- Kalender: GM_RefreshCalendar + Event-Detail-Popup
 -- ============================================================
 local eventDetailFrame = nil
 local CAL_COLS, CAL_ROWS = 7, 6
@@ -1555,7 +1751,7 @@ local function BuildCalendarCells()
     end
 end
 
-local function RefreshCalendar()
+function GM_RefreshCalendar()
     if not calContent then return end
     BuildCalendarCells()
     if calMonthLbl then calMonthLbl:SetText(G..MONTH_NAMES[calViewMonth].." "..calViewYear..X) end
@@ -1678,7 +1874,8 @@ function BuildEventDetailPopup(eventId)
     info:SetText(T..FormatEventDate(ev.datets).."  "..ev.tstr..X
         .."    "..Dg..L.CAL_CREATOR..X..W..(ev.creator or "")..X
         ..((ev.dungeon or "")~="" and ("    "..Dg.."Dungeon: "..X..W..ev.dungeon..X) or "")
-        ..(ev.etype=="GUILD" and ("    "..G..L.ETYPE_GUILD.." · "..L.CAL_POINTS.." "..(ev.points or 0)..X) or ""))
+        ..(ev.etype=="GUILD" and ("    "..G..L.ETYPE_GUILD.." · "..L.CAL_POINTS.." "..(ev.points or 0)..X) or "")
+        ..((ev.repeatDays or 0)>0 and ("  "..Dg..L.REP_HINT..X) or ""))
     local infoRoles=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     infoRoles:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-24); infoRoles:SetWidth(460); infoRoles:SetJustifyH("LEFT")
     infoRoles:SetText(RoleCountTxt("TANK").."    "..RoleCountTxt("HEAL").."    "..RoleCountTxt("DPS"))
@@ -1795,7 +1992,7 @@ function BuildEventDetailPopup(eventId)
 
     if mySignup then
         sigBtn:SetText(L.CAL_LEAVE)
-        sigBtn:SetScript("OnClick",function() UnsignEvent(eventId); RefreshCalendar(); f:Hide() end)
+        sigBtn:SetScript("OnClick",function() UnsignEvent(eventId); GM_RefreshCalendar(); f:Hide() end)
         local changeBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); changeBtn:SetSize(90,22)
         changeBtn:SetPoint("LEFT",ddSignClass,"RIGHT",-8,2); changeBtn:SetText(L.CAL_CHANGE)
         changeBtn:SetScript("OnClick",function()
@@ -1804,7 +2001,7 @@ function BuildEventDetailPopup(eventId)
                 local c=counts[pendingRole]
                 if c.cap>0 and c.signed>=c.cap then print(R.."[GuildMarkt]"..X.." "..L.CAL_ROLEFULL); return end
             end
-            SignEvent(eventId,pendingRole,pendingClass); RefreshCalendar()
+            SignEvent(eventId,pendingRole,pendingClass); GM_RefreshCalendar()
             print(T.."[GuildMarkt]"..X.." "..L.CAL_CHANGED)
             BuildEventDetailPopup(eventId)
         end)
@@ -1815,14 +2012,14 @@ function BuildEventDetailPopup(eventId)
             ..(statusByName[me]=="reserve" and ("  "..Dg.."("..(isDE and "Ersatzbank" or "Reserve")..")"..X) or ""))
     else
         sigBtn:SetText(L.CAL_SIGNUP)
-        sigBtn:SetScript("OnClick",function() SignEvent(eventId,pendingRole,pendingClass); RefreshCalendar(); f:Hide() end)
+        sigBtn:SetScript("OnClick",function() SignEvent(eventId,pendingRole,pendingClass); GM_RefreshCalendar(); f:Hide() end)
     end
     -- Loeschen-Button (Ersteller oder per Config-Rang berechtigte)
     if CanRemoveEvent(ev) then
         local delBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); delBtn:SetSize(90,22)
         delBtn:SetPoint("RIGHT",closeBtn,"LEFT",-6,0); delBtn:SetText(R..L.CAL_DELETE..X)
         delBtn:SetScript("OnClick",function()
-            DeleteEvent(eventId); RefreshCalendar(); f:Hide()
+            DeleteEvent(eventId); GM_RefreshCalendar(); f:Hide()
             print(T.."[GuildMarkt]"..X.." "..L.CAL_DELETED)
         end)
     end
@@ -1894,8 +2091,14 @@ function GM_BuildDKPFrame()
         listBottom=38
     end
 
+    -- Mini-Spaltenkoepfe: Events (Anwesenheit) | Punkte
+    local hdrA=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    hdrA:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",canAdjust and -120 or -74,-56); hdrA:SetText(Dg..L.DKP_ATT_HDR..X)
+    local hdrP=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    hdrP:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",canAdjust and -72 or -26,-56); hdrP:SetText(Dg.."DKP"..X)
+
     local sfD=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
-    sfD:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,-58); sfD:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,listBottom)
+    sfD:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,-72); sfD:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,listBottom)
     local sc
 
     local RefreshDkpList  -- forward fuer AdjustDKP
@@ -1931,10 +2134,14 @@ function GM_BuildDKPFrame()
             local lbRank=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
             lbRank:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-ry-3); lbRank:SetText(Dg..i.."."..X); lbRank:SetSize(24,14)
             local lbN=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
-            lbN:SetPoint("TOPLEFT",sc,"TOPLEFT",30,-ry-3); lbN:SetSize(160,14); lbN:SetJustifyH("LEFT")
+            lbN:SetPoint("TOPLEFT",sc,"TOPLEFT",30,-ry-3); lbN:SetSize(130,14); lbN:SetJustifyH("LEFT")
             lbN:SetText(online and W..entry.name..X or Dg..entry.name..X)
+            -- Anwesenheits-Spalte (bestaetigte Event-Teilnahmen)
+            local lbA=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            lbA:SetPoint("TOPRIGHT",sc,"TOPRIGHT",canAdjust and -100 or -54,-ry-3); lbA:SetSize(36,14); lbA:SetJustifyH("RIGHT")
+            lbA:SetText(T..((GuildMarketDB.attendance and GuildMarketDB.attendance[entry.name]) or 0)..X)
             local lbB=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
-            lbB:SetPoint("TOPRIGHT",sc,"TOPRIGHT",canAdjust and -52 or -6,-ry-3); lbB:SetSize(60,14); lbB:SetJustifyH("RIGHT")
+            lbB:SetPoint("TOPRIGHT",sc,"TOPRIGHT",canAdjust and -52 or -6,-ry-3); lbB:SetSize(44,14); lbB:SetJustifyH("RIGHT")
             lbB:SetText(G..entry.bal..X)
             if canAdjust then
                 local name=entry.name
@@ -2304,6 +2511,160 @@ end
 RefreshMerchFrame=function() if merchFrame and merchFrame:IsShown() then GM_BuildMerchFrame() end end
 
 -- ============================================================
+-- Berufe-Verzeichnis-Fenster
+-- ============================================================
+local profsFrame=nil; local profSearch=""
+function GM_BuildProfsFrame()
+    if profsFrame then profsFrame:Hide(); profsFrame=nil end
+    local f=CreateFrame("Frame","GuildMarketProfsFrame",UIParent,"BasicFrameTemplateWithInset")
+    f:SetSize(480,460); f:SetPoint("CENTER",UIParent,"CENTER",-60,0)
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
+    f:SetFrameStrata("DIALOG"); f:SetFrameLevel(25)
+    f.TitleBg:SetHeight(28)
+    local titleFS=f:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+    titleFS:SetPoint("CENTER",f.TitleBg,"CENTER",0,2); titleFS:SetText(G..L.PROF_TITLE..X)
+    local me=UnitName("player")
+
+    local ebSearchP=CreateFrame("EditBox","GuildMarketProfSearchBox",f,"InputBoxTemplate")
+    ebSearchP:SetSize(180,20); ebSearchP:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",12,-8)
+    ebSearchP:SetAutoFocus(false); ebSearchP:SetMaxLetters(24); ebSearchP:SetText(profSearch)
+
+    local sep=f:CreateTexture(nil,"BACKGROUND"); sep:SetHeight(1)
+    sep:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-34); sep:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-34)
+    sep:SetColorTexture(0.3,0.5,0.8,0.7)
+
+    local sfP=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+    sfP:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,-40); sfP:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,10)
+    local sc
+
+    local function ProfsText(p)
+        local out={}
+        for idx=1,#PROF_NAMES do
+            local rank=p.s and p.s[idx]
+            if rank then out[#out+1]=PROF_NAMES[idx].." "..rank end
+        end
+        return table.concat(out,", ")
+    end
+
+    local function RefreshProfList()
+        if sc then sc:Hide() end
+        sc=CreateFrame("Frame",nil,sfP); sc:SetWidth(420); sc:SetHeight(20); sfP:SetScrollChild(sc)
+        local st=profSearch:lower()
+        local list={}
+        for name,p in pairs(GuildMarketDB.profs or {}) do
+            local ptext=ProfsText(p)
+            local match=(st=="" or name:lower():find(st,1,true) or ptext:lower():find(st,1,true))
+            if match and ptext~="" then list[#list+1]={name=name,ptext=ptext} end
+        end
+        table.sort(list,function(a,b)
+            if (a.name==me)~=(b.name==me) then return a.name==me end
+            local ao=IsOnline(a.name) and 1 or 0; local bo=IsOnline(b.name) and 1 or 0
+            if ao~=bo then return ao>bo end
+            return a.name<b.name
+        end)
+        local ry=0
+        for i,e in ipairs(list) do
+            local rbg=sc:CreateTexture(nil,"BACKGROUND"); rbg:SetHeight(30)
+            rbg:SetPoint("TOPLEFT",sc,"TOPLEFT",0,-ry); rbg:SetPoint("TOPRIGHT",sc,"TOPRIGHT",0,-ry)
+            if e.name==me then rbg:SetColorTexture(0.10,0.18,0.10,0.8)
+            elseif i%2==1 then rbg:SetColorTexture(0.08,0.08,0.18,0.7) else rbg:SetColorTexture(0.05,0.05,0.12,0.5) end
+            local online=IsOnline(e.name)
+            local dot=sc:CreateTexture(nil,"OVERLAY"); dot:SetSize(13,13); dot:SetPoint("TOPLEFT",sc,"TOPLEFT",4,-ry-3)
+            dot:SetTexture(online and "Interface\\FriendsFrame\\StatusIcon-Online" or "Interface\\FriendsFrame\\StatusIcon-Offline")
+            dot:SetVertexColor(1,1,1,online and 1 or 0.35)
+            local lbN=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
+            lbN:SetPoint("TOPLEFT",sc,"TOPLEFT",20,-ry-2); lbN:SetSize(120,14); lbN:SetJustifyH("LEFT")
+            lbN:SetText(online and W..e.name..X or Dg..e.name..X)
+            local lbP=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            lbP:SetPoint("TOPLEFT",sc,"TOPLEFT",20,-ry-16); lbP:SetPoint("TOPRIGHT",sc,"TOPRIGHT",online and -90 or -6,-ry-16)
+            lbP:SetHeight(13); lbP:SetJustifyH("LEFT")
+            lbP:SetText(T..e.ptext..X)
+            if online and e.name~=me then
+                local wb=CreateFrame("Button",nil,sc,"UIPanelButtonTemplate"); wb:SetSize(80,19)
+                wb:SetPoint("TOPRIGHT",sc,"TOPRIGHT",-4,-ry-6); wb:SetText(L.INFO_WHISPER)
+                local nm=e.name
+                wb:SetScript("OnClick",function() OpenWhisper(nm) end)
+            end
+            ry=ry+30; sc:SetHeight(ry)
+        end
+        if #list==0 then
+            local hint=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            hint:SetPoint("TOPLEFT",sc,"TOPLEFT",8,-8); hint:SetWidth(400); hint:SetJustifyH("LEFT")
+            hint:SetText(Dg..L.PROF_EMPTY..X); sc:SetHeight(40)
+        end
+    end
+    ebSearchP:SetScript("OnTextChanged",function(self,user)
+        if user then profSearch=self:GetText(); RefreshProfList() end
+    end)
+    RefreshProfList()
+    profsFrame=f; f:Show()
+end
+
+-- ============================================================
+-- Schwarzes-Brett-Fenster (Ansicht + Verfassen fuer Berechtigte)
+-- ============================================================
+local boardFrame=nil
+function GM_BuildBoardFrame()
+    if boardFrame then boardFrame:Hide(); boardFrame=nil end
+    local f=CreateFrame("Frame","GuildMarketBoardFrame",UIParent,"BasicFrameTemplateWithInset")
+    local canPost=CanPostBoard()
+    f:SetSize(460,canPost and 430 or 300); f:SetPoint("CENTER",UIParent,"CENTER",60,0)
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
+    f:SetFrameStrata("DIALOG"); f:SetFrameLevel(25)
+    f.TitleBg:SetHeight(28)
+    local titleFS=f:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+    titleFS:SetPoint("CENTER",f.TitleBg,"CENTER",0,2); titleFS:SetText(G..L.BRD_TITLE..X)
+
+    -- Aktuelle Ankuendigung
+    local b=GuildMarketDB.board
+    local meta=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    meta:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-8)
+    if b and b.text and b.text~="" then
+        meta:SetText(Dg..L.BRD_BY.." "..X..W..(b.author or "?")..X..Dg.." — "..date("%d.%m.%Y %H:%M",b.ts or 0)..X)
+    else
+        meta:SetText(Dg..L.BRD_EMPTY..X)
+    end
+    local sfB=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+    sfB:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",8,-26)
+    sfB:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-28,canPost and 170 or 10)
+    local scB=CreateFrame("Frame",nil,sfB); scB:SetWidth(400); scB:SetHeight(20); sfB:SetScrollChild(scB)
+    local txt=scB:CreateFontString(nil,"OVERLAY","GameFontNormal")
+    txt:SetPoint("TOPLEFT",scB,"TOPLEFT",4,-4); txt:SetWidth(390); txt:SetJustifyH("LEFT"); txt:SetJustifyV("TOP")
+    txt:SetText(W..((b and b.text) or "")..X); scB:SetHeight(math.max(20,txt:GetStringHeight()+10))
+
+    -- Verfassen (nur Berechtigte)
+    if canPost then
+        local sep=f:CreateTexture(nil,"BACKGROUND"); sep:SetHeight(1)
+        sep:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",4,164); sep:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-4,164)
+        sep:SetColorTexture(0.3,0.5,0.8,0.7)
+        local editBg=GM_MakeBg(f,0.04,0.04,0.08,0.9,0.25,0.25,0.45)
+        editBg:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",6,40)
+        editBg:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-6,40); editBg:SetHeight(118)
+        local sfE=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+        sfE:SetPoint("TOPLEFT",editBg,"TOPLEFT",8,-6); sfE:SetPoint("BOTTOMRIGHT",editBg,"BOTTOMRIGHT",-26,6)
+        local eb=CreateFrame("EditBox","GuildMarketBoardEditBox",sfE)
+        eb:SetMultiLine(true); eb:SetMaxLetters(600); eb:SetAutoFocus(false)
+        eb:SetFontObject("GameFontNormal"); eb:SetWidth(370)
+        eb:SetText((b and b.author==UnitName("player") and b.text) or "")
+        eb:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
+        sfE:SetScrollChild(eb)
+        editBg:SetScript("OnMouseDown",function() eb:SetFocus() end)
+        local postBtnB=CreateFrame("Button",nil,f,"UIPanelButtonTemplate"); postBtnB:SetSize(160,24)
+        postBtnB:SetPoint("BOTTOMLEFT",f.InsetBg,"BOTTOMLEFT",8,8); postBtnB:SetText(L.BRD_SAVE)
+        postBtnB:SetScript("OnClick",function()
+            local t=eb:GetText() or ""
+            if t=="" then return end
+            PostBoard(t)
+            GM_BuildBoardFrame()
+        end)
+    end
+    boardFrame=f; f:Show()
+end
+RefreshBoardFrame=function() if boardFrame and boardFrame:IsShown() then GM_BuildBoardFrame() end end
+
+-- ============================================================
 -- Haupt-UI
 -- ============================================================
 local function BuildUI()
@@ -2349,8 +2710,22 @@ local function BuildUI()
     merchBtn:SetScript("OnClick",GM_BuildMerchFrame)
     merchBtn_ref=merchBtn; GM_UpdateMerchButton()
 
+    local profsBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+    profsBtn:SetSize(52,20); profsBtn:SetPoint("RIGHT",merchBtn,"LEFT",-4,0)
+    profsBtn:SetText(L.PROF_BTN)
+    profsBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_BOTTOM"); GameTooltip:ClearLines(); GameTooltip:AddLine(G..L.PROF_TITLE..X); GameTooltip:Show() end)
+    profsBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    profsBtn:SetScript("OnClick",GM_BuildProfsFrame)
+
+    local boardBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+    boardBtn:SetSize(46,20); boardBtn:SetPoint("RIGHT",profsBtn,"LEFT",-4,0)
+    boardBtn:SetText(L.BRD_BTN)
+    boardBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_BOTTOM"); GameTooltip:ClearLines(); GameTooltip:AddLine(G..L.BRD_TITLE..X); GameTooltip:Show() end)
+    boardBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    boardBtn:SetScript("OnClick",GM_BuildBoardFrame)
+
     local infoBtn=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
-    infoBtn:SetSize(22,20); infoBtn:SetPoint("RIGHT",merchBtn,"LEFT",-4,0)
+    infoBtn:SetSize(22,20); infoBtn:SetPoint("RIGHT",boardBtn,"LEFT",-4,0)
     infoBtn:SetText("?")
     infoBtn:SetScript("OnEnter",function(self) GameTooltip:SetOwner(self,"ANCHOR_BOTTOM"); GameTooltip:ClearLines(); GameTooltip:AddLine(G.."Marktplatz-Regeln & Kontakt"..X); GameTooltip:Show() end)
     infoBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
@@ -2403,12 +2778,12 @@ local function BuildUI()
     local ebSearch=CreateFrame("EditBox","GuildMarketSearchBox",f,"InputBoxTemplate")
     ebSearch:SetSize(350,18); ebSearch:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",58,-58)
     ebSearch:SetAutoFocus(false); ebSearch:SetMaxLetters(40)
-    ebSearch:SetScript("OnTextChanged",function(self) searchText=self:GetText(); RefreshList() end)
-    ebSearch:SetScript("OnEscapePressed",function(self) self:SetText(""); searchText=""; RefreshList() end)
+    ebSearch:SetScript("OnTextChanged",function(self) searchText=self:GetText(); GM_RefreshList() end)
+    ebSearch:SetScript("OnEscapePressed",function(self) self:SetText(""); searchText=""; GM_RefreshList() end)
 
     local clearSearch=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
     clearSearch:SetSize(50,18); clearSearch:SetPoint("LEFT",ebSearch,"RIGHT",4,0)
-    clearSearch:SetText("X"); clearSearch:SetScript("OnClick",function() ebSearch:SetText(""); searchText=""; RefreshList() end)
+    clearSearch:SetText("X"); clearSearch:SetScript("OnClick",function() ebSearch:SetText(""); searchText=""; GM_RefreshList() end)
 
     -- ══ Header ══
     local hBg=f:CreateTexture(nil,"BACKGROUND")
@@ -2434,7 +2809,7 @@ local function BuildUI()
     local content=CreateFrame("Frame",nil,sf)
     content:SetWidth(ROW_W); content:SetHeight(20); sf:SetScrollChild(content)
     listContent=content
-    sf:SetScript("OnSizeChanged",function(self) local nw=math.max(self:GetWidth()-18,ROW_W); listContent:SetWidth(nw); if mainFrame and mainFrame:IsShown() then RefreshList() end end)
+    sf:SetScript("OnSizeChanged",function(self) local nw=math.max(self:GetWidth()-18,ROW_W); listContent:SetWidth(nw); if mainFrame and mainFrame:IsShown() then GM_RefreshList() end end)
 
     -- Trennlinie Formular
     local div=f:CreateTexture(nil,"BACKGROUND")
@@ -2476,7 +2851,7 @@ local function BuildUI()
     clearBtn:SetScript("OnClick",function()
         local me2,n=UnitName("player"),0
         for id,e in pairs(GuildMarketDB.listings) do if e.contact==me2 then GM_DeleteListing(id); n=n+1 end end
-        RefreshList(); print(T.."[GuildMarkt]"..X.." "..n.." "..L.MSG_DELETED)
+        GM_RefreshList(); print(T.."[GuildMarkt]"..X.." "..n.." "..L.MSG_DELETED)
     end)
 
     -- ── Notiz ────────────────────────────────── bg y=76..116
@@ -2708,14 +3083,14 @@ local function BuildUI()
     calMonthLbl:SetPoint("TOP",calHdrBg,"TOP",0,-3); calMonthLbl:Hide()
     calPrevBtn:SetScript("OnClick",function()
         calViewMonth=calViewMonth-1; if calViewMonth<1 then calViewMonth=12; calViewYear=calViewYear-1 end
-        RefreshCalendar()
+        GM_RefreshCalendar()
     end)
     calNextBtn:SetScript("OnClick",function()
         calViewMonth=calViewMonth+1; if calViewMonth>12 then calViewMonth=1; calViewYear=calViewYear+1 end
-        RefreshCalendar()
+        GM_RefreshCalendar()
     end)
     calTodayBtn:SetScript("OnClick",function()
-        local t=date("*t"); calViewYear,calViewMonth=t.year,t.month; RefreshCalendar()
+        local t=date("*t"); calViewYear,calViewMonth=t.year,t.month; GM_RefreshCalendar()
     end)
 
     -- Wochentag-Header
@@ -2882,6 +3257,24 @@ local function BuildUI()
     local lbAnnounce=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     lbAnnounce:SetPoint("LEFT",cbAnnounce,"RIGHT",2,0); lbAnnounce:SetText(Dg..L.CAL_ANNOUNCE..X); lbAnnounce:Hide()
 
+    -- Wiederholung: Einmalig / Woechentlich / Alle 2 Wochen (nur Ersteller-Client legt Folgetermine an)
+    local calRepeat=0
+    local ddRepeat=CreateFrame("Frame","GuildMarketCalRepeatDD",f,"UIDropDownMenuTemplate")
+    ddRepeat:SetPoint("LEFT",lbAnnounce,"RIGHT",-4,-2); ddRepeat:Hide()
+    UIDropDownMenu_SetWidth(ddRepeat,110)
+    UIDropDownMenu_Initialize(ddRepeat,function(_,level)
+        local opts={{v=0,t=L.REP_NONE},{v=7,t=L.REP_WEEKLY},{v=14,t=L.REP_BIWEEKLY}}
+        for _,o in ipairs(opts) do
+            local ddInfo=UIDropDownMenu_CreateInfo(); ddInfo.text=o.t; ddInfo.value=o.v; ddInfo.checked=(calRepeat==o.v)
+            ddInfo.func=function(btn)
+                calRepeat=btn.value
+                UIDropDownMenu_SetSelectedValue(ddRepeat,btn.value); UIDropDownMenu_SetText(ddRepeat,btn.text)
+            end
+            UIDropDownMenu_AddButton(ddInfo,level)
+        end
+    end)
+    UIDropDownMenu_SetSelectedValue(ddRepeat,0); UIDropDownMenu_SetText(ddRepeat,L.REP_NONE)
+
     calSetDateField = function(dateStr)
         ebCalDate:SetText(dateStr); ebCalTitle:SetFocus()
     end
@@ -2902,8 +3295,9 @@ local function BuildUI()
         local pts = calEvtType=="GUILD" and (tonumber(ebCalPts:GetText()) or (GuildMarketDB.config.dkpPerEvent or 10)) or 0
         local newId=GM_PostEvent(title,datets,tstr,roles,ebCalDesc:GetText(),dungeon,calEvtType,pts)
         print(T.."[GuildMarkt]"..X.." "..L.CAL_CREATED.." "..Gr..title..X)
+        local nev=GuildMarketDB.events[newId]
+        if nev and calRepeat>0 then nev.repeatDays=calRepeat end
         if calAnnounce then
-            local nev=GuildMarketDB.events[newId]
             if nev then nev.announce=true end
             if IsInGuild() then
                 local inst=(dungeon~="" and dungeon~=title) and (" ["..dungeon.."]") or ""
@@ -2915,7 +3309,7 @@ local function BuildUI()
         calDungeonSel=NONE_DUNGEON; UIDropDownMenu_SetSelectedValue(ddCalDungeon,NONE_DUNGEON); UIDropDownMenu_SetText(ddCalDungeon,NONE_DUNGEON)
         calEvtType="DUNGEON"; UIDropDownMenu_SetSelectedValue(ddEvtType,"DUNGEON"); UIDropDownMenu_SetText(ddEvtType,L.ETYPE_DUNGEON)
         UpdateCalPtsVisibility()
-        RefreshCalendar()
+        GM_RefreshCalendar()
         BuildEventDetailPopup(newId)
     end)
 
@@ -2940,8 +3334,8 @@ local function BuildUI()
         ebRoleTank:Hide(); ebRoleHeal:Hide(); ebRoleDps:Hide()
         lbCalPts:Hide(); ebCalPts:Hide()
         calNotizBg:Hide(); ebCalDesc:Hide()
-        createEvtBtn:Hide(); cbAnnounce:Hide(); lbAnnounce:Hide()
-        ShowSection(postType); RefreshList()
+        createEvtBtn:Hide(); cbAnnounce:Hide(); lbAnnounce:Hide(); ddRepeat:Hide()
+        ShowSection(postType); GM_RefreshList()
     end
 
     ActivateCalendarMode = function()
@@ -2964,10 +3358,10 @@ local function BuildUI()
         ebRoleTank:Show(); ebRoleHeal:Show(); ebRoleDps:Show()
         UpdateCalPtsVisibility()
         calNotizBg:Show(); ebCalDesc:Show()
-        createEvtBtn:Show(); cbAnnounce:Show(); lbAnnounce:Show()
+        createEvtBtn:Show(); cbAnnounce:Show(); lbAnnounce:Show(); ddRepeat:Show()
         cbAnnounce:SetChecked(calAnnounce)
         if GM_CanCreateEvent() then createEvtBtn:Enable() else createEvtBtn:Disable() end
-        RefreshCalendar()
+        GM_RefreshCalendar()
     end
     GM_ActivateCalendarMode=ActivateCalendarMode -- global fuer Minimap-Button
 
@@ -2996,7 +3390,7 @@ local function BuildUI()
         ebGold:SetText(""); ebSilber:SetText(""); ebKupfer:SetText("")
         ebAmt:SetText(""); ebNote:SetText(""); ebMats:SetText("")
         postFree=false; freeBtn:SetText(L.BTN_FREE_N); ebGold:Enable(); ebSilber:Enable(); ebKupfer:Enable()
-        RefreshList(); print(T.."[GuildMarkt]"..X.." "..L.MSG_POSTED.." "..Clr(postType).." "..W..name..X)
+        GM_RefreshList(); print(T.."[GuildMarkt]"..X.." "..L.MSG_POSTED.." "..Clr(postType).." "..W..name..X)
     end)
 
     mainFrame=f
@@ -3079,19 +3473,40 @@ do
         acc=0
         if not GuildMarketDB or not GuildMarketDB.events or not IsInGuild() then return end
         local me=UnitName("player"); local now=time()
+        local toCreate=nil -- {evt} — Anlage ausserhalb der Schleife (pairs + insert vermeiden)
         for _,evt in pairs(GuildMarketDB.events) do
-            if evt.creator==me and evt.announce and not evt.reminded then
+            if evt.creator==me then
                 local hh,mm=(evt.tstr or ""):match("^(%d+):(%d+)$")
-                if hh then
-                    local evTime=(evt.datets or 0)+tonumber(hh)*3600+tonumber(mm)*60
-                    if evTime>now and evTime-now<=3600 then
-                        evt.reminded=true
-                        local sigCount=0
-                        for _,s in pairs(evt.signups or {}) do if type(s)=="table" then sigCount=sigCount+1 end end
-                        SendChatMessage("[GuildMarkt] "..string.format(L.CAL_CHAT_REM,evt.title or "?",evt.tstr or "?",sigCount),"GUILD")
-                    end
+                local evTime=hh and ((evt.datets or 0)+tonumber(hh)*3600+tonumber(mm)*60) or nil
+                -- 1h-Erinnerung im Gildenchat (einmalig)
+                if evt.announce and not evt.reminded and evTime and evTime>now and evTime-now<=3600 then
+                    evt.reminded=true
+                    local sigCount=0
+                    for _,s in pairs(evt.signups or {}) do if type(s)=="table" then sigCount=sigCount+1 end end
+                    SendChatMessage("[GuildMarkt] "..string.format(L.CAL_CHAT_REM,evt.title or "?",evt.tstr or "?",sigCount),"GUILD")
+                end
+                -- Wiederkehrend: 1h nach Eventstart den Folgetermin anlegen (einmalig)
+                if (evt.repeatDays or 0)>0 and not evt.repeatDone and evTime and now>=evTime+3600 then
+                    evt.repeatDone=true
+                    toCreate=toCreate or {}
+                    toCreate[#toCreate+1]=evt
                 end
             end
+        end
+        if toCreate then
+            for _,old in ipairs(toCreate) do
+                local newDate=(old.datets or 0)+old.repeatDays*86400
+                local roles={TANK=(old.roles and old.roles.TANK) or 0,HEAL=(old.roles and old.roles.HEAL) or 0,DPS=(old.roles and old.roles.DPS) or 0}
+                local newId=GM_PostEvent(old.title,newDate,old.tstr,roles,old.desc or "",old.dungeon or "",old.etype,old.points)
+                local nev=GuildMarketDB.events[newId]
+                if nev then nev.repeatDays=old.repeatDays; nev.announce=old.announce end
+                print(T.."[GuildMarkt]"..X.." "..L.REP_CREATED.." "..Gr..(old.title or "?")..X.." — "..W..date("%d.%m.%Y",newDate).." "..(old.tstr or "")..X)
+                if old.announce and IsInGuild() then
+                    local inst=((old.dungeon or "")~="" and old.dungeon~=old.title) and (" ["..old.dungeon.."]") or ""
+                    SendChatMessage("[GuildMarkt] "..string.format(L.CAL_CHAT_NEW,old.title or "?",date("%d.%m.%Y",newDate),old.tstr or "?",inst),"GUILD")
+                end
+            end
+            if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then GM_RefreshCalendar() end
         end
     end)
 end
@@ -3113,20 +3528,24 @@ local function PrintTodaysEvents()
 end
 
 local rosStaging={}  -- EVTROS-Chunks pro Absender/Event bis zum Commit
+local brdStaging={}  -- BRDPOST-Chunks pro Absender bis zum Commit
 local lastHiSent=0   -- HI-Antworten drosseln (eine Antwort deckt mehrere HELLOs ab)
 local ev=CreateFrame("Frame","GuildMarketEventFrame",UIParent)
 ev:RegisterEvent("PLAYER_LOGIN"); ev:RegisterEvent("CHAT_MSG_ADDON"); ev:RegisterEvent("GUILD_ROSTER_UPDATE")
 ev:SetScript("OnEvent",function(self,event,...)
     if event=="PLAYER_LOGIN" then
-        InitDB(); PruneExpired(); PruneExpiredEvents(); PruneAuctions(); PruneMerchOrders(); if GuildRoster then GuildRoster() end
+        InitDB(); PruneExpired(); PruneExpiredEvents(); PruneAuctions(); PruneMerchOrders(); PruneProfs(); if GuildRoster then GuildRoster() end
         local me=UnitName("player"); if me then MarkAddonUser(me) end
         LoadKnownAddonUsers(); GM_UpdateUserCount()
-        DelayCall(6,function() SendGuild("HELLO"); BroadcastMine(); GM_RequestSync(); BroadcastEvents(); SendGuild("EVTREQ"); SendGuild("DKPREQ"); SendGuild("AUCREQ"); SendGuild("MSHREQ") end)
+        DelayCall(6,function() SendGuild("HELLO"); BroadcastMine(); GM_RequestSync(); BroadcastEvents(); SendGuild("EVTREQ"); SendGuild("DKPREQ"); SendGuild("AUCREQ"); SendGuild("MSHREQ"); SendGuild("PROFREQ"); SendGuild("BRDREQ") end)
         CreateMinimapButton()
+        DelayCall(8,ScanOwnProfs)
         DelayCall(12,PrintTodaysEvents)
+        DelayCall(14,ShowBoardPopup)
+        DelayCall(15,CheckDkpDecay)
         print(T.."[GuildMarkt]"..X.." "..L.MSG_LOADED.." — "..G.."/gmarkt"..X.." | "..Dg..(GetGuildInfo("player") or "")..X)
     elseif event=="GUILD_ROSTER_UPDATE" then
-        UpdateRoster(); if mainFrame and mainFrame:IsShown() then RefreshList() end
+        UpdateRoster(); if mainFrame and mainFrame:IsShown() then GM_RefreshList() end
     elseif event=="CHAT_MSG_ADDON" then
         local prefix,msg,_,sender=...
         if prefix~=MSG_PREFIX then return end
@@ -3157,12 +3576,55 @@ ev:SetScript("OnEvent",function(self,event,...)
                 if p[10] then GuildMarketDB.config.auctionRank=tonumber(p[10]) or 9 end
                 if p[11] then GuildMarketDB.config.dkpAdjustRank=tonumber(p[11]) or 9 end
                 if p[12] then GuildMarketDB.config.merchRank=tonumber(p[12]) or 9 end
-                print(T.."[GuildMarkt]"..X.." "..L.MSG_SETTINGS); if mainFrame and mainFrame:IsShown() then RefreshList() end end; return
+                if p[13] then GuildMarketDB.config.boardRank=tonumber(p[13]) or 9 end
+                if p[14] then GuildMarketDB.config.dkpDecayPercent=tonumber(p[14]) or 0 end
+                if p[15] then GuildMarketDB.config.dkpDecayDays=tonumber(p[15]) or 7 end
+                if p[16] then GuildMarketDB.config.dkpLastDecay=tonumber(p[16]) or GuildMarketDB.config.dkpLastDecay end
+                print(T.."[GuildMarkt]"..X.." "..L.MSG_SETTINGS); if mainFrame and mainFrame:IsShown() then GM_RefreshList() end end; return
         end
         if msg:sub(1,3)=="DEL" then
             local id=msg:sub(5)
             if id and GuildMarketDB.listings[id] then local sN=sender:match("^([^%-]+)") or sender
-                if GuildMarketDB.listings[id].contact==sN then GuildMarketDB.listings[id]=nil; if mainFrame and mainFrame:IsShown() then RefreshList() end end end; return
+                if GuildMarketDB.listings[id].contact==sN then GuildMarketDB.listings[id]=nil; if mainFrame and mainFrame:IsShown() then GM_RefreshList() end end end; return
+        end
+        -- ── Berufe-Protokoll ────────────────────────────────────
+        if msg=="PROFREQ" then BroadcastMyProfs(); return end
+        if msg:sub(1,7)=="PROFSET" then
+            local skills={}
+            for seg in msg:sub(9):gmatch("([^|]+)") do
+                local idx,rank=seg:match("^(%d+):(%d+)$")
+                if idx then skills[tonumber(idx)]=tonumber(rank) end
+            end
+            if next(skills) then
+                GuildMarketDB.profs[sn]={s=skills,ts=time()}
+            end; return
+        end
+        -- ── Schwarzes-Brett-Protokoll ───────────────────────────
+        if msg=="BRDREQ" then
+            -- nur senden, wenn ich selbst berechtigt bin (Empfaenger prueft den Absender-Rang)
+            if CanPostBoard() then BroadcastBoard() end
+            return
+        end
+        if msg:sub(1,7)=="BRDPOST" then
+            local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
+            local bts,author,flag=tonumber(p[2]),p[3],p[4]
+            if not bts or not flag then return end
+            -- Absender muss laut Roster berechtigt sein (auch Relays)
+            local r=GetMemberRank(sn)
+            if r==nil or (r~=0 and r>((GuildMarketDB.config and GuildMarketDB.config.boardRank) or 9)) then return end
+            brdStaging[sn]=brdStaging[sn] or {}
+            if flag=="B" or flag=="F" then brdStaging[sn]={ts=bts,author=author,text=""} end
+            local st=brdStaging[sn]
+            if st and st.ts==bts then
+                st.text=(st.text or "")..(p[5] or "")
+                if flag=="E" or flag=="F" then
+                    if bts>((GuildMarketDB.board and GuildMarketDB.board.ts) or 0) then
+                        GuildMarketDB.board={text=st.text,author=author,ts=bts}
+                        if RefreshBoardFrame then RefreshBoardFrame() end
+                    end
+                    brdStaging[sn]=nil
+                end
+            end; return
         end
         -- ── Merch-Shop-Protokoll ────────────────────────────────
         if msg=="MSHREQ" then BroadcastMerch(); return end
@@ -3301,8 +3763,16 @@ ev:SetScript("OnEvent",function(self,event,...)
         if msg=="DKPREQ" then BroadcastDKP(); return end
         if msg:sub(1,7)=="DKPSYNC" then
             for seg in msg:sub(9):gmatch("([^|]+)") do
-                local name,bal,ts=seg:match("^([^:]+):(-?%d+):(%d+)$")
-                if name then ApplyDKP(name,tonumber(bal),tonumber(ts)) end
+                -- 4. Feld (Anwesenheit) optional: alte Clients senden 3 Felder
+                local name,bal,ts,att=seg:match("^([^:]+):(-?%d+):(%d+):?(%d*)$")
+                if name then
+                    ApplyDKP(name,tonumber(bal),tonumber(ts))
+                    -- Anwesenheit ist monoton steigend: max() ist der korrekte Merge
+                    local a=tonumber(att)
+                    if a and a>((GuildMarketDB.attendance and GuildMarketDB.attendance[name]) or 0) then
+                        GuildMarketDB.attendance[name]=a
+                    end
+                end
             end; return
         end
         if msg:sub(1,7)=="EVTCONF" then
@@ -3310,7 +3780,13 @@ ev:SetScript("OnEvent",function(self,event,...)
             local eid,player,bal,ts=p[2],p[3],tonumber(p[4]),tonumber(p[5])
             if eid and player then
                 local ev2=GuildMarketDB.events and GuildMarketDB.events[eid]
-                if ev2 and ev2.signups and type(ev2.signups[player])=="table" then ev2.signups[player].confirmed=true end
+                if ev2 and ev2.signups and type(ev2.signups[player])=="table" then
+                    -- Anwesenheit nur beim Uebergang unbestaetigt->bestaetigt zaehlen
+                    if not ev2.signups[player].confirmed then
+                        GuildMarketDB.attendance[player]=(GuildMarketDB.attendance[player] or 0)+1
+                    end
+                    ev2.signups[player].confirmed=true
+                end
                 if bal then ApplyDKP(player,bal,ts) end
             end; return
         end
@@ -3341,7 +3817,7 @@ ev:SetScript("OnEvent",function(self,event,...)
                             if type(old[name])=="table" and old[name].confirmed then s.confirmed=true end
                         end
                         ev2.signups=stage; rosStaging[sn][eid]=nil
-                        if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+                        if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then GM_RefreshCalendar() end
                     end
                 end
             end; return
@@ -3351,7 +3827,7 @@ ev:SetScript("OnEvent",function(self,event,...)
             if eid and GuildMarketDB.events and GuildMarketDB.events[eid] then
                 GuildMarketDB.events[eid].signups=GuildMarketDB.events[eid].signups or {}
                 GuildMarketDB.events[eid].signups[sn]=nil
-                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then GM_RefreshCalendar() end
             end; return
         end
         if msg:sub(1,7)=="EVTSIGN" then
@@ -3360,7 +3836,7 @@ ev:SetScript("OnEvent",function(self,event,...)
             if eid and GuildMarketDB.events and GuildMarketDB.events[eid] then
                 GuildMarketDB.events[eid].signups=GuildMarketDB.events[eid].signups or {}
                 GuildMarketDB.events[eid].signups[sn]={role=role,class=class,ts=ts or time()}
-                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then GM_RefreshCalendar() end
             end; return
         end
         if msg:sub(1,7)=="EVTPOST" then
@@ -3369,7 +3845,7 @@ ev:SetScript("OnEvent",function(self,event,...)
                 ev2.creator=sn
                 if GuildMarketDB.events[eid] then ev2.signups=GuildMarketDB.events[eid].signups or {} end
                 GuildMarketDB.events[eid]=ev2
-                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+                if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then GM_RefreshCalendar() end
             end; return
         end
         if msg:sub(1,6)=="EVTDEL" then
@@ -3381,14 +3857,14 @@ ev:SetScript("OnEvent",function(self,event,...)
                 local authorized=ev2.creator==sn or (r~=nil and (r==0 or r<=((GuildMarketDB.config and GuildMarketDB.config.eventDeleteRank) or 9)))
                 if authorized then
                     GuildMarketDB.events[eid]=nil
-                    if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then RefreshCalendar() end
+                    if mainFrame and mainFrame:IsShown() and currentMode=="CALENDAR" then GM_RefreshCalendar() end
                 end
             end; return
         end
         local action,id,entry=Deserialize(msg)
         if action=="POST" and id and entry then
             entry.contact=sender:match("^([^%-]+)") or sender
-            if entry.expires>time() then GuildMarketDB.listings[id]=entry; if mainFrame and mainFrame:IsShown() then RefreshList() end end
+            if entry.expires>time() then GuildMarketDB.listings[id]=entry; if mainFrame and mainFrame:IsShown() then GM_RefreshList() end end
         end
     end
 end)
@@ -3401,7 +3877,7 @@ function GM_Toggle()
     if mainFrame:IsShown() then mainFrame:Hide()
     else mainFrame:ClearAllPoints(); mainFrame:SetPoint("CENTER",UIParent,"CENTER",0,0)
         if GuildRoster then GuildRoster() end; PruneExpired(); PruneExpiredEvents()
-        if currentMode=="CALENDAR" then RefreshCalendar() else RefreshList() end
+        if currentMode=="CALENDAR" then GM_RefreshCalendar() else GM_RefreshList() end
         GM_UpdateMerchButton()
         mainFrame:Show()
     end
