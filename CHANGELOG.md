@@ -5,6 +5,18 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [1.1.1-beta] · 2026-07-12 · Kontinent-Menüs, Kloster, Mindeststufen
+
+### Added
+- **Mindeststufen-Prüfung**: Events übernehmen die Mindeststufe der gewählten Instanz (Raids neu hinterlegt: Kara 68, TBC-Raids 70, Classic-Raids 50–60); Anzeige im Detail-Popup, Anmelden-Button gesperrt + Tooltip bei zu niedriger Stufe, zentrale Absicherung in SignEvent; Folgetermine erben die Stufe (Protokoll: EVTPOST-Feld 13)
+- **Mindeststufe hinter jedem Dungeon** im Auswahlmenü („Blackrocktiefen 50+")
+
+### Changed
+- **Instanz-Menüs nach Kontinent gegliedert** (Kalender UND Ziehdienst): Östliche Königreiche / Kalimdor / Scherbenwelt — keine überlaufenden Listen mehr; DUNGEONS-Tabelle um Kontinent-Feld erweitert
+- **„SM:" → „Kloster:"** (EN „Monastery:") — die vier Klosterflügel sind jetzt auffindbar benannt
+
+---
+
 ## [1.1.0-beta] · 2026-07-12 · Gilden-Werkzeuge
 
 ### Added

@@ -190,6 +190,12 @@ local L = {
                         or  "New event: '%s' on %s at %s%s — sign up in the guild market (/gmarkt)!",
     CAL_CHAT_REM = isDE and "Erinnerung: '%s' startet um %s (in ca. 1 Stunde)! Anmeldungen: %d — jetzt noch eintragen: /gmarkt"
                         or  "Reminder: '%s' starts at %s (in about 1 hour)! Signups: %d — join now: /gmarkt",
+    -- Kontinente + Mindeststufe
+    CONT_EK      = isDE and "Dungeons: Oestliche Koenigreiche" or "Dungeons: Eastern Kingdoms",
+    CONT_KAL     = isDE and "Dungeons: Kalimdor"               or "Dungeons: Kalimdor",
+    CONT_TBC     = isDE and "Dungeons: Scherbenwelt"           or "Dungeons: Outland",
+    CAL_MINLVL   = isDE and "Mindeststufe:"                    or "Min. level:",
+    CAL_LOWLEVEL = isDE and "Anmeldung nicht moeglich — Mindeststufe %d nicht erreicht." or "Cannot sign up — minimum level %d not met.",
     -- Wiederkehrende Events
     REP_NONE     = isDE and "Einmalig"          or "One-time",
     REP_WEEKLY   = isDE and "Woechentlich"      or "Weekly",
@@ -254,132 +260,140 @@ local BERUFE = isDE and {
     "Herbalism","Jewelcrafting","Leatherworking","Mining","Skinning","Tailoring",
 }
 
--- { name, minCarryLevel }
--- { Name, Mindestlevel, Fraktion } — Fraktion: "A"=nur Allianz, "H"=nur Horde, nil=beide
+-- { Name, Mindestlevel, Fraktion, Kontinent }
+-- Fraktion: "A"=nur Allianz, "H"=nur Horde, "-"=beide
+-- Kontinent: "EK"=Oestliche Koenigreiche, "KAL"=Kalimdor, "TBC"=Scherbenwelt/BC (inkl. HdZ + MgT)
 local DUNGEONS = isDE and {
-    { "Wunsch-Dungeon",             1  },
-    { "Der Flammenschlund",         13, "H" },
-    { "Die Hoehlen des Wehklagens", 15 },
-    { "Die Todesminen",             15 },
-    { "Burg Schattenfang",          18 },
-    { "Das Verlies",                22, "A" },
-    { "Tiefschwarze Grotte",        20 },
-    { "Der Kral von Razorfen",      25 },
-    { "Gnomeregan",                 24 },
-    { "SM: Friedhof",               28 },
-    { "SM: Bibliothek",             32 },
-    { "SM: Waffenkammer",           35 },
-    { "SM: Kathedrale",             38 },
-    { "Die Huegel von Razorfen",    35 },
-    { "Uldaman",                    40 },
-    { "Zul'Farrak",                 42 },
-    { "Maraudon",                   45 },
-    { "Der Tempel von Atal'Hakkar", 48 },
-    { "Blackrocktiefen",            50 },
-    { "Untere Schwarzfelsspitze",   55 },
-    { "Obere Schwarzfelsspitze",    55 },
-    { "Duesterbruch",               55 },
-    { "Scholomance",                55 },
-    { "Stratholme",                 55 },
-    { "Hoellenfeuerbollwerk",       58 },
-    { "Der Blutkessel",             59 },
-    { "Die Sklavenunterkuenfte",    60 },
-    { "Der Tiefensumpf",            61 },
-    { "Die Managruft",              62 },
-    { "Auchenaikrypta",             63 },
-    { "Sethekkhallen",              65 },
-    { "Das Schattenlabyrinth",      68 },
-    { "Die Zerschmetterten Hallen", 68 },
-    { "Die Dampfkammer",            68 },
-    { "Die Botanika",               68 },
-    { "Die Arkatraz",               68 },
-    { "Das alte Hillsbrad",         66 },
-    { "Der Schwarze Morast",        68 },
-    { "Magisterterrasse",           68 },
+    { "Wunsch-Dungeon",             1,  "-", "-"   },
+    { "Der Flammenschlund",         13, "H", "KAL" },
+    { "Die Hoehlen des Wehklagens", 15, "-", "KAL" },
+    { "Die Todesminen",             15, "-", "EK"  },
+    { "Burg Schattenfang",          18, "-", "EK"  },
+    { "Das Verlies",                22, "A", "EK"  },
+    { "Tiefschwarze Grotte",        20, "-", "KAL" },
+    { "Der Kral von Razorfen",      25, "-", "KAL" },
+    { "Gnomeregan",                 24, "-", "EK"  },
+    { "Kloster: Friedhof",          28, "-", "EK"  },
+    { "Kloster: Bibliothek",        32, "-", "EK"  },
+    { "Kloster: Waffenkammer",      35, "-", "EK"  },
+    { "Kloster: Kathedrale",        38, "-", "EK"  },
+    { "Die Huegel von Razorfen",    35, "-", "KAL" },
+    { "Uldaman",                    40, "-", "EK"  },
+    { "Zul'Farrak",                 42, "-", "KAL" },
+    { "Maraudon",                   45, "-", "KAL" },
+    { "Der Tempel von Atal'Hakkar", 48, "-", "EK"  },
+    { "Blackrocktiefen",            50, "-", "EK"  },
+    { "Untere Schwarzfelsspitze",   55, "-", "EK"  },
+    { "Obere Schwarzfelsspitze",    55, "-", "EK"  },
+    { "Duesterbruch",               55, "-", "KAL" },
+    { "Scholomance",                55, "-", "EK"  },
+    { "Stratholme",                 55, "-", "EK"  },
+    { "Hoellenfeuerbollwerk",       58, "-", "TBC" },
+    { "Der Blutkessel",             59, "-", "TBC" },
+    { "Die Sklavenunterkuenfte",    60, "-", "TBC" },
+    { "Der Tiefensumpf",            61, "-", "TBC" },
+    { "Die Managruft",              62, "-", "TBC" },
+    { "Auchenaikrypta",             63, "-", "TBC" },
+    { "Sethekkhallen",              65, "-", "TBC" },
+    { "Das Schattenlabyrinth",      68, "-", "TBC" },
+    { "Die Zerschmetterten Hallen", 68, "-", "TBC" },
+    { "Die Dampfkammer",            68, "-", "TBC" },
+    { "Die Botanika",               68, "-", "TBC" },
+    { "Die Arkatraz",               68, "-", "TBC" },
+    { "Das alte Hillsbrad",         66, "-", "TBC" },
+    { "Der Schwarze Morast",        68, "-", "TBC" },
+    { "Magisterterrasse",           68, "-", "TBC" },
 } or {
-    { "Custom Dungeon",             1  },
-    { "Ragefire Chasm",             13, "H" },
-    { "Wailing Caverns",            15 },
-    { "The Deadmines",              15 },
-    { "Shadowfang Keep",            18 },
-    { "The Stockade",               22, "A" },
-    { "Blackfathom Deeps",          20 },
-    { "Razorfen Kraul",             25 },
-    { "Gnomeregan",                 24 },
-    { "SM: Graveyard",              28 },
-    { "SM: Library",                32 },
-    { "SM: Armory",                 35 },
-    { "SM: Cathedral",              38 },
-    { "Razorfen Downs",             35 },
-    { "Uldaman",                    40 },
-    { "Zul'Farrak",                 42 },
-    { "Maraudon",                   45 },
-    { "Sunken Temple",              48 },
-    { "Blackrock Depths",           50 },
-    { "Lower Blackrock Spire",      55 },
-    { "Upper Blackrock Spire",      55 },
-    { "Dire Maul",                  55 },
-    { "Scholomance",                55 },
-    { "Stratholme",                 55 },
-    { "Hellfire Ramparts",          58 },
-    { "The Blood Furnace",          59 },
-    { "The Slave Pens",             60 },
-    { "The Underbog",               61 },
-    { "Mana-Tombs",                 62 },
-    { "Auchenai Crypts",            63 },
-    { "Sethekk Halls",              65 },
-    { "Shadow Labyrinth",           68 },
-    { "The Shattered Halls",        68 },
-    { "The Steam Vaults",           68 },
-    { "The Botanica",               68 },
-    { "The Arcatraz",               68 },
-    { "Old Hillsbrad Foothills",    66 },
-    { "The Black Morass",           68 },
-    { "Magisters' Terrace",         68 },
+    { "Custom Dungeon",             1,  "-", "-"   },
+    { "Ragefire Chasm",             13, "H", "KAL" },
+    { "Wailing Caverns",            15, "-", "KAL" },
+    { "The Deadmines",              15, "-", "EK"  },
+    { "Shadowfang Keep",            18, "-", "EK"  },
+    { "The Stockade",               22, "A", "EK"  },
+    { "Blackfathom Deeps",          20, "-", "KAL" },
+    { "Razorfen Kraul",             25, "-", "KAL" },
+    { "Gnomeregan",                 24, "-", "EK"  },
+    { "Monastery: Graveyard",       28, "-", "EK"  },
+    { "Monastery: Library",         32, "-", "EK"  },
+    { "Monastery: Armory",          35, "-", "EK"  },
+    { "Monastery: Cathedral",       38, "-", "EK"  },
+    { "Razorfen Downs",             35, "-", "KAL" },
+    { "Uldaman",                    40, "-", "EK"  },
+    { "Zul'Farrak",                 42, "-", "KAL" },
+    { "Maraudon",                   45, "-", "KAL" },
+    { "Sunken Temple",              48, "-", "EK"  },
+    { "Blackrock Depths",           50, "-", "EK"  },
+    { "Lower Blackrock Spire",      55, "-", "EK"  },
+    { "Upper Blackrock Spire",      55, "-", "EK"  },
+    { "Dire Maul",                  55, "-", "KAL" },
+    { "Scholomance",                55, "-", "EK"  },
+    { "Stratholme",                 55, "-", "EK"  },
+    { "Hellfire Ramparts",          58, "-", "TBC" },
+    { "The Blood Furnace",          59, "-", "TBC" },
+    { "The Slave Pens",             60, "-", "TBC" },
+    { "The Underbog",               61, "-", "TBC" },
+    { "Mana-Tombs",                 62, "-", "TBC" },
+    { "Auchenai Crypts",            63, "-", "TBC" },
+    { "Sethekk Halls",              65, "-", "TBC" },
+    { "Shadow Labyrinth",           68, "-", "TBC" },
+    { "The Shattered Halls",        68, "-", "TBC" },
+    { "The Steam Vaults",           68, "-", "TBC" },
+    { "The Botanica",               68, "-", "TBC" },
+    { "The Arcatraz",               68, "-", "TBC" },
+    { "Old Hillsbrad Foothills",    66, "-", "TBC" },
+    { "The Black Morass",           68, "-", "TBC" },
+    { "Magisters' Terrace",         68, "-", "TBC" },
 }
 -- Eigene Fraktion einmalig ermitteln; Eintraege der Gegenfraktion werden ausgeblendet
 local playerFaction = UnitFactionGroup and UnitFactionGroup("player") or "Alliance"
 local function DungeonFitsFaction(d)
-    if not d[3] then return true end
+    if d[3]~="A" and d[3]~="H" then return true end
     return (d[3]=="A" and playerFaction=="Alliance") or (d[3]=="H" and playerFaction=="Horde")
 end
 
--- Raids: { Name, Raid-Groesse } — Groesse steuert die Vorbefuellung der Rollen-Plaetze
+-- Raids: { Name, Raid-Groesse, Mindestlevel } — Groesse steuert die Rollen-Vorbefuellung
 local RAIDS = isDE and {
-    { "Karazhan",                    10 },
-    { "Zul'Aman",                    10 },
-    { "Gruuls Unterschlupf",         25 },
-    { "Magtheridons Kammer",         25 },
-    { "Hoehle des Schlangenschreins",25 },
-    { "Festung der Stuerme",         25 },
-    { "Schlacht um den Hyjal",       25 },
-    { "Der Schwarze Tempel",         25 },
-    { "Sonnenbrunnenplateau",        25 },
-    { "Zul'Gurub",                   20 },
-    { "Ruinen von Ahn'Qiraj",        20 },
-    { "Geschmolzener Kern",          40 },
-    { "Onyxias Hort",                40 },
-    { "Pechschwingenhort",           40 },
-    { "Tempel von Ahn'Qiraj",        40 },
-    { "Naxxramas",                   40 },
+    { "Karazhan",                    10, 68 },
+    { "Zul'Aman",                    10, 70 },
+    { "Gruuls Unterschlupf",         25, 70 },
+    { "Magtheridons Kammer",         25, 70 },
+    { "Hoehle des Schlangenschreins",25, 70 },
+    { "Festung der Stuerme",         25, 70 },
+    { "Schlacht um den Hyjal",       25, 70 },
+    { "Der Schwarze Tempel",         25, 70 },
+    { "Sonnenbrunnenplateau",        25, 70 },
+    { "Zul'Gurub",                   20, 51 },
+    { "Ruinen von Ahn'Qiraj",        20, 50 },
+    { "Geschmolzener Kern",          40, 54 },
+    { "Onyxias Hort",                40, 55 },
+    { "Pechschwingenhort",           40, 60 },
+    { "Tempel von Ahn'Qiraj",        40, 60 },
+    { "Naxxramas",                   40, 60 },
 } or {
-    { "Karazhan",                    10 },
-    { "Zul'Aman",                    10 },
-    { "Gruul's Lair",                25 },
-    { "Magtheridon's Lair",          25 },
-    { "Serpentshrine Cavern",        25 },
-    { "Tempest Keep",                25 },
-    { "Battle for Mount Hyjal",      25 },
-    { "Black Temple",                25 },
-    { "Sunwell Plateau",             25 },
-    { "Zul'Gurub",                   20 },
-    { "Ruins of Ahn'Qiraj",          20 },
-    { "Molten Core",                 40 },
-    { "Onyxia's Lair",               40 },
-    { "Blackwing Lair",              40 },
-    { "Temple of Ahn'Qiraj",         40 },
-    { "Naxxramas",                   40 },
+    { "Karazhan",                    10, 68 },
+    { "Zul'Aman",                    10, 70 },
+    { "Gruul's Lair",                25, 70 },
+    { "Magtheridon's Lair",          25, 70 },
+    { "Serpentshrine Cavern",        25, 70 },
+    { "Tempest Keep",                25, 70 },
+    { "Battle for Mount Hyjal",      25, 70 },
+    { "Black Temple",                25, 70 },
+    { "Sunwell Plateau",             25, 70 },
+    { "Zul'Gurub",                   20, 51 },
+    { "Ruins of Ahn'Qiraj",          20, 50 },
+    { "Molten Core",                 40, 54 },
+    { "Onyxia's Lair",               40, 55 },
+    { "Blackwing Lair",              40, 60 },
+    { "Temple of Ahn'Qiraj",         40, 60 },
+    { "Naxxramas",                   40, 60 },
 }
+-- Mindestlevel einer gewaehlten Instanz (Dungeon oder Raid); 0 = keine Anforderung
+function GM_InstanceMinLevel(name)
+    if not name or name=="" then return 0 end
+    for _,d in ipairs(DUNGEONS) do if d[1]==name then return d[2] or 0 end end
+    for _,r in ipairs(RAIDS) do if r[1]==name then return r[3] or 0 end end
+    return 0
+end
 -- Rollen-Presets nach Raid-Groesse: {TANK, HEAL, DPS}
 local RAID_PRESETS = { [10]={2,3,5}, [20]={2,5,13}, [25]={3,6,16}, [40]={4,10,26} }
 
@@ -931,7 +945,7 @@ local function SerializeEvent(id,ev)
     local r=ev.roles or {}
     return "EVTPOST|"..id.."|"..title.."|"..tostring(ev.datets or 0).."|"..tstr.."|"
         ..tostring(r.TANK or 0).."|"..tostring(r.HEAL or 0).."|"..tostring(r.DPS or 0).."|"..dungeon
-        .."|"..(ev.etype or "DUNGEON").."|"..tostring(ev.points or 0).."|"..desc
+        .."|"..(ev.etype or "DUNGEON").."|"..tostring(ev.points or 0).."|"..desc.."|"..tostring(ev.minlvl or 0)
 end
 local function DeserializeEvent(msg)
     local t={}; for p in (msg.."|"):gmatch("([^|]*)|") do t[#t+1]=p end
@@ -939,7 +953,7 @@ local function DeserializeEvent(msg)
     return t[2],{title=t[3],datets=tonumber(t[4]) or 0,tstr=t[5],
         roles={TANK=tonumber(t[6]) or 0,HEAL=tonumber(t[7]) or 0,DPS=tonumber(t[8]) or 0},
         dungeon=TokenToInstance(t[9] or ""),etype=t[10]=="GUILD" and "GUILD" or "DUNGEON",points=tonumber(t[11]) or 0,
-        desc=t[12] or "",signups={},creator=""}
+        desc=t[12] or "",minlvl=tonumber(t[13]) or 0,signups={},creator=""}
 end
 -- Rollen-Status wird nicht mit-synchronisiert, sondern deterministisch aus signups+ts hergeleitet,
 -- damit alle Clients ohne Extra-Nachrichten auf denselben Ersatz/Signed-Stand kommen.
@@ -964,15 +978,20 @@ local function GetEventStatus(ev)
     end
     return statusByName,counts
 end
-function GM_PostEvent(title,datets,tstr,roles,desc,dungeon,etype,points)
+function GM_PostEvent(title,datets,tstr,roles,desc,dungeon,etype,points,minlvl)
     local me=UnitName("player"); local id="EVT:"..me..":"..time()
     local ev={title=title,datets=datets,tstr=tstr,roles=roles,desc=desc,dungeon=dungeon or "",
-        etype=etype or "DUNGEON",points=points or 0,signups={},creator=me,created=time()}
+        etype=etype or "DUNGEON",points=points or 0,minlvl=minlvl or 0,signups={},creator=me,created=time()}
     GuildMarketDB.events[id]=ev; SendGuild(SerializeEvent(id,ev)); return id
 end
 local function DeleteEvent(id) GuildMarketDB.events[id]=nil; SendGuild("EVTDEL|"..id) end
 local function SignEvent(id,role,class)
     local ev=GuildMarketDB.events[id]; if not ev then return end
+    -- Mindeststufe der Instanz muss erreicht sein
+    if (ev.minlvl or 0)>(UnitLevel("player") or 0) then
+        print(R.."[GuildMarkt]"..X.." "..string.format(L.CAL_LOWLEVEL,ev.minlvl))
+        return
+    end
     local me=UnitName("player")
     local old=ev.signups[me]
     -- Rollenwechsel = neue Position in der Ziel-Rolle; reiner Klassenwechsel behaelt die Position
@@ -1875,6 +1894,7 @@ function BuildEventDetailPopup(eventId)
         .."    "..Dg..L.CAL_CREATOR..X..W..(ev.creator or "")..X
         ..((ev.dungeon or "")~="" and ("    "..Dg.."Dungeon: "..X..W..ev.dungeon..X) or "")
         ..(ev.etype=="GUILD" and ("    "..G..L.ETYPE_GUILD.." · "..L.CAL_POINTS.." "..(ev.points or 0)..X) or "")
+        ..((ev.minlvl or 0)>0 and ("    "..Dg..L.CAL_MINLVL.." "..X..W..ev.minlvl..X) or "")
         ..((ev.repeatDays or 0)>0 and ("  "..Dg..L.REP_HINT..X) or ""))
     local infoRoles=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     infoRoles:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",10,-24); infoRoles:SetWidth(460); infoRoles:SetJustifyH("LEFT")
@@ -2012,7 +2032,17 @@ function BuildEventDetailPopup(eventId)
             ..(statusByName[me]=="reserve" and ("  "..Dg.."("..(isDE and "Ersatzbank" or "Reserve")..")"..X) or ""))
     else
         sigBtn:SetText(L.CAL_SIGNUP)
-        sigBtn:SetScript("OnClick",function() SignEvent(eventId,pendingRole,pendingClass); GM_RefreshCalendar(); f:Hide() end)
+        if (ev.minlvl or 0)>(UnitLevel("player") or 0) then
+            sigBtn:Disable()
+            sigBtn:SetScript("OnEnter",function(self)
+                GameTooltip:SetOwner(self,"ANCHOR_TOP"); GameTooltip:ClearLines()
+                GameTooltip:AddLine(R..string.format(L.CAL_LOWLEVEL,ev.minlvl)..X)
+                GameTooltip:Show()
+            end)
+            sigBtn:SetScript("OnLeave",function() GameTooltip:Hide() end)
+        else
+            sigBtn:SetScript("OnClick",function() SignEvent(eventId,pendingRole,pendingClass); GM_RefreshCalendar(); f:Hide() end)
+        end
     end
     -- Loeschen-Button (Ersteller oder per Config-Rang berechtigte)
     if CanRemoveEvent(ev) then
@@ -2971,14 +3001,33 @@ local function BuildUI()
 
     local function RefreshDungeonDD()
         local plvl=UnitLevel("player") or 70
-        UIDropDownMenu_Initialize(ddDungeon,function(_,level)
-            for _,d in ipairs(DUNGEONS) do
-                if plvl>=d[2] and DungeonFitsFaction(d) then
-                    local info=UIDropDownMenu_CreateInfo(); info.text=d[1]; info.value=d[1]
-                    info.checked=(postDungeon==d[1])
-                    info.func=function(btn) postDungeon=btn.value; UIDropDownMenu_SetSelectedValue(ddDungeon,btn.value); UIDropDownMenu_SetText(ddDungeon,btn.value) end
-                    UIDropDownMenu_AddButton(info,level)
+        local function PickDungeon(btn)
+            postDungeon=btn.value
+            UIDropDownMenu_SetSelectedValue(ddDungeon,btn.value); UIDropDownMenu_SetText(ddDungeon,btn.value)
+            CloseDropDownMenus()
+        end
+        UIDropDownMenu_Initialize(ddDungeon,function(_,level,menuList)
+            if level==2 then
+                local cont=menuList and menuList:sub(8)
+                for i=2,#DUNGEONS do
+                    local d=DUNGEONS[i]
+                    if d[4]==cont and plvl>=d[2] and DungeonFitsFaction(d) then
+                        local info=UIDropDownMenu_CreateInfo(); info.text=d[1]; info.value=d[1]
+                        info.checked=(postDungeon==d[1])
+                        info.func=PickDungeon
+                        UIDropDownMenu_AddButton(info,level)
+                    end
                 end
+                return
+            end
+            -- Wunsch-Dungeon (Freitext-Eintrag) + Kontinent-Untermenues
+            local info=UIDropDownMenu_CreateInfo(); info.text=DUNGEONS[1][1]; info.value=DUNGEONS[1][1]
+            info.checked=(postDungeon==DUNGEONS[1][1]); info.func=PickDungeon
+            UIDropDownMenu_AddButton(info,level)
+            for _,sub in ipairs({{t=L.CONT_EK,m="ZD_DNG_EK"},{t=L.CONT_KAL,m="ZD_DNG_KAL"},{t=L.CONT_TBC,m="ZD_DNG_TBC"}}) do
+                local subD=UIDropDownMenu_CreateInfo()
+                subD.text=sub.t; subD.hasArrow=true; subD.notCheckable=true; subD.menuList=sub.m; subD.keepShownOnClick=true
+                UIDropDownMenu_AddButton(subD,level)
             end
         end)
         UIDropDownMenu_SetSelectedValue(ddDungeon,postDungeon); UIDropDownMenu_SetText(ddDungeon,postDungeon)
@@ -3153,11 +3202,15 @@ local function BuildUI()
     end
     UIDropDownMenu_Initialize(ddCalDungeon,function(_,level,menuList)
         if level==2 then
-            if menuList=="GM_DUNGEONS" then
+            -- Dungeons nach Kontinent (haelt jede Teilliste bildschirmtauglich kurz)
+            if menuList=="GM_DNG_EK" or menuList=="GM_DNG_KAL" or menuList=="GM_DNG_TBC" then
+                local cont=menuList:sub(8) -- "EK"/"KAL"/"TBC"
                 for i=2,#DUNGEONS do
-                    if DungeonFitsFaction(DUNGEONS[i]) then
-                        local name=DUNGEONS[i][1]
-                        local ddInfo=UIDropDownMenu_CreateInfo(); ddInfo.text=name; ddInfo.value=name; ddInfo.checked=(calDungeonSel==name)
+                    local d=DUNGEONS[i]
+                    if d[4]==cont and DungeonFitsFaction(d) then
+                        local name=d[1]
+                        local ddInfo=UIDropDownMenu_CreateInfo()
+                        ddInfo.text=name.." "..Dg..d[2].."+"..X; ddInfo.value=name; ddInfo.checked=(calDungeonSel==name)
                         ddInfo.func=function(btn) SelectInstance(btn.value) end
                         UIDropDownMenu_AddButton(ddInfo,level)
                     end
@@ -3176,9 +3229,11 @@ local function BuildUI()
         local ddInfo=UIDropDownMenu_CreateInfo(); ddInfo.text=NONE_DUNGEON; ddInfo.value=NONE_DUNGEON; ddInfo.checked=(calDungeonSel==NONE_DUNGEON)
         ddInfo.func=function(btn) SelectInstance(btn.value) end
         UIDropDownMenu_AddButton(ddInfo,level)
-        local subD=UIDropDownMenu_CreateInfo()
-        subD.text=isDE and "Dungeons" or "Dungeons"; subD.hasArrow=true; subD.notCheckable=true; subD.menuList="GM_DUNGEONS"; subD.keepShownOnClick=true
-        UIDropDownMenu_AddButton(subD,level)
+        for _,sub in ipairs({{t=L.CONT_EK,m="GM_DNG_EK"},{t=L.CONT_KAL,m="GM_DNG_KAL"},{t=L.CONT_TBC,m="GM_DNG_TBC"}}) do
+            local subD=UIDropDownMenu_CreateInfo()
+            subD.text=sub.t; subD.hasArrow=true; subD.notCheckable=true; subD.menuList=sub.m; subD.keepShownOnClick=true
+            UIDropDownMenu_AddButton(subD,level)
+        end
         local subR=UIDropDownMenu_CreateInfo()
         subR.text=G..(isDE and "Raids" or "Raids")..X; subR.hasArrow=true; subR.notCheckable=true; subR.menuList="GM_RAIDS"; subR.keepShownOnClick=true
         UIDropDownMenu_AddButton(subR,level)
@@ -3293,7 +3348,7 @@ local function BuildUI()
         local dungeon = calDungeonSel~=NONE_DUNGEON and calDungeonSel or ""
         if calEvtType=="GUILD" and not GM_CanCreateGuildEvent() then print(R.."[GuildMarkt]"..X.." "..L.CAL_NORANKG); return end
         local pts = calEvtType=="GUILD" and (tonumber(ebCalPts:GetText()) or (GuildMarketDB.config.dkpPerEvent or 10)) or 0
-        local newId=GM_PostEvent(title,datets,tstr,roles,ebCalDesc:GetText(),dungeon,calEvtType,pts)
+        local newId=GM_PostEvent(title,datets,tstr,roles,ebCalDesc:GetText(),dungeon,calEvtType,pts,GM_InstanceMinLevel(dungeon))
         print(T.."[GuildMarkt]"..X.." "..L.CAL_CREATED.." "..Gr..title..X)
         local nev=GuildMarketDB.events[newId]
         if nev and calRepeat>0 then nev.repeatDays=calRepeat end
@@ -3497,7 +3552,7 @@ do
             for _,old in ipairs(toCreate) do
                 local newDate=(old.datets or 0)+old.repeatDays*86400
                 local roles={TANK=(old.roles and old.roles.TANK) or 0,HEAL=(old.roles and old.roles.HEAL) or 0,DPS=(old.roles and old.roles.DPS) or 0}
-                local newId=GM_PostEvent(old.title,newDate,old.tstr,roles,old.desc or "",old.dungeon or "",old.etype,old.points)
+                local newId=GM_PostEvent(old.title,newDate,old.tstr,roles,old.desc or "",old.dungeon or "",old.etype,old.points,old.minlvl)
                 local nev=GuildMarketDB.events[newId]
                 if nev then nev.repeatDays=old.repeatDays; nev.announce=old.announce end
                 print(T.."[GuildMarkt]"..X.." "..L.REP_CREATED.." "..Gr..(old.title or "?")..X.." — "..W..date("%d.%m.%Y",newDate).." "..(old.tstr or "")..X)
