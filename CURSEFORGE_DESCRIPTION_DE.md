@@ -1,6 +1,6 @@
 # GuildMarket — Marktplatz, Gilden-Kalender, DKP, Merch-Shop & mehr
 
-**GuildMarket** ist die Komplett-Lösung für das Gildenleben in WoW TBC Classic Anniversary und Classic Era: gildeninterner Marktplatz, Event-Kalender für Dungeons und Raids mit Rollen-Anmeldung und wiederkehrenden Terminen, ein vollwertiges DKP-System mit Anwesenheits-Statistik, Punkteverfall und Loot-Auktionen, ein Merch-Shop, ein Berufe-Verzeichnis und ein Schwarzes Brett — ganz ohne externen Server, alles peer-to-peer via Gildenchat.
+**GuildMarket** ist die Komplett-Lösung für das Gildenleben in WoW TBC Classic Anniversary und Classic Era: gildeninterner Marktplatz, Event-Kalender für Dungeons und Raids mit Rollen-Anmeldung und wiederkehrenden Terminen, ein vollwertiges DKP-System mit Anwesenheits-Statistik, Punkteverfall und Loot-Auktionen, ein Merch-Shop, ein durchsuchbares Berufe-Verzeichnis mit Rezeptlisten und ein Schwarzes Brett — ganz ohne externen Server, alles peer-to-peer via Gildenchat.
 
 ---
 
@@ -45,6 +45,8 @@
 
 - **Vollautomatisch**: Deine Berufe (inkl. Kochkunst, Erste Hilfe, Angeln) werden beim Login aus den Skill-Zeilen erkannt und gesynct — niemand muss etwas pflegen
 - **Durchsuchbar**: in Sekunden herausfinden, wer was craften kann („wer hat Verzauberkunst?"), mit Skill-Stand, Online-Status und Flüstern-Button
+- **Rezeptlisten auf Klick**: Öffne den Beruf eines Crafters mit einem Klick und sieh genau, was er herstellen kann — die Liste wird live vom Spieler abgefragt, ist durchsuchbar, zeigt beim Drüberfahren den vollen Item-Tooltip und verlinkt per Shift-Klick ins Chatfenster
+- Deine eigenen Rezepte werden automatisch beim Öffnen des Berufsfensters erfasst; eine Login-Erinnerung weist dich auf noch nicht gescannte Fenster hin
 - **Sprachneutraler Sync**: gemischte DE/EN-Gilden sehen Berufsnamen jeweils in ihrer Sprache
 
 ## 📌 Schwarzes Brett

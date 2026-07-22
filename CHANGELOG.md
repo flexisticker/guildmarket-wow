@@ -5,6 +5,17 @@ Format: [Version] · Datum · Kurzbeschreibung
 
 ---
 
+## [1.2.0-beta] · 2026-07-12 · Berufe: On-Demand-Rezeptlisten mit Tooltips
+
+### Added
+- **Rezeptlisten im Berufe-Verzeichnis**: „Rezepte"-Button pro Crafter — die Liste wird live vom Spieler abgefragt (On-Demand, keine Voll-Synchronisation), durchsuchbar, mit Berufs-Tabs bei mehreren Berufen
+- **Item-Tooltip beim Drüberfahren** über einen Rezept-Eintrag; **Shift-Klick verlinkt** das Item ins Chatfenster
+- **Automatischer Rezept-Scan** beim Öffnen des Berufsfensters (TradeSkill + Craft/Verzauberkunst, alle Kategorien werden ausgeklappt); lokaler Cache, Item-IDs werden mitgespeichert
+- **Login-Reminder**: fehlt für einen herstellbaren Beruf der Rezept-Cache, wird zum einmaligen Öffnen des Berufsfensters aufgefordert
+- Protokoll: `RCPREQ`/`RCPLIST` (chunked, gedrosselter Sender 1 Nachr./0,2s)/`RCPNONE`; `GuildMarketDB.myRecipes`
+
+---
+
 ## [1.1.1-beta] · 2026-07-12 · Kontinent-Menüs, Kloster, Mindeststufen
 
 ### Added

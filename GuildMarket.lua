@@ -213,6 +213,13 @@ local L = {
     PROF_BTN     = isDE and "Berufe"             or "Profs",
     PROF_EMPTY   = isDE and "Noch keine Berufe erfasst. Berufe werden beim Login automatisch erkannt." or "No professions registered yet. Professions are detected automatically at login.",
     PROF_SEARCH  = isDE and "Suchen..."          or "Search...",
+    PROF_RECIPES = isDE and "Rezepte"            or "Recipes",
+    PROF_RCP_LOADING = isDE and "Lade Rezepte..." or "Loading recipes...",
+    PROF_RCP_NONE = isDE and "%s hat die Rezepte noch nicht erfasst — bitte einmal das Berufsfenster oeffnen." or "%s hasn't scanned recipes yet — please open the profession window once.",
+    PROF_RCP_TIMEOUT = isDE and "Keine Antwort — evtl. offline oder ohne Addon." or "No response — offline or without the addon.",
+    PROF_RCP_EMPTY = isDE and "Keine Rezepte gefunden." or "No recipes found.",
+    PROF_SCAN_HINT = isDE and "Bitte oeffne einmal deine Berufsfenster (%s), damit deine Rezepte gildenweit sichtbar werden." or "Please open your profession windows (%s) once so your recipes become visible guild-wide.",
+    PROF_SCANNED = isDE and "Rezepte erfasst: %s (%d)" or "Recipes scanned: %s (%d)",
     -- Schwarzes Brett
     BRD_TITLE    = isDE and "Schwarzes Brett"    or "Guild Board",
     BRD_BTN      = isDE and "Brett"              or "Board",
@@ -425,6 +432,13 @@ local PROF_NAMES = isDE and {
     "Herbalism", "Jewelcrafting", "Leatherworking", "Mining",
     "Tailoring", "Skinning", "Cooking", "First Aid", "Fishing",
 }
+-- Welche Berufe haben ein Rezeptfenster (herstellbar)? Sammelberufe (Kräuter/Bergbau/
+-- Kürschner) und Angeln haben keine Rezepte. Index passt zu PROF_NAMES.
+local PROF_HAS_RECIPES = {[1]=true,[2]=true,[3]=true,[4]=true,[6]=true,[7]=true,[9]=true,[11]=true,[12]=true}
+local function ProfIdxByName(nm)
+    if not nm then return nil end
+    for idx,pn in ipairs(PROF_NAMES) do if pn==nm then return idx end end
+end
 
 -- Klassen/Rollen fuer Event-Signup (TBC Classic: keine Death Knights/Monks)
 local CLASS_TOKENS = {"WARRIOR","PALADIN","HUNTER","ROGUE","PRIEST","SHAMAN","MAGE","WARLOCK","DRUID"}
@@ -592,6 +606,7 @@ local function InitDB()
     if not GuildMarketDB.addonUsersSeen then GuildMarketDB.addonUsersSeen={} end
     if not GuildMarketDB.attendance then GuildMarketDB.attendance={} end
     if not GuildMarketDB.profs then GuildMarketDB.profs={} end
+    if not GuildMarketDB.myRecipes then GuildMarketDB.myRecipes={} end
     if not GuildMarketDB.config.boardRank then GuildMarketDB.config.boardRank=9 end
     if not GuildMarketDB.config.dkpDecayPercent then GuildMarketDB.config.dkpDecayPercent=0 end
     if not GuildMarketDB.config.dkpDecayDays then GuildMarketDB.config.dkpDecayDays=7 end
@@ -1143,6 +1158,161 @@ local function PruneProfs()
     for name,p in pairs(GuildMarketDB.profs) do
         if (p.ts or 0)+60*86400<now then GuildMarketDB.profs[name]=nil end
     end
+end
+
+-- ============================================================
+-- Rezept-Scan: liest die eigenen herstellbaren Rezepte beim Oeffnen des
+-- Berufsfensters aus und cached sie lokal (GuildMarketDB.myRecipes[profIdx]).
+-- Andere Spieler koennen sie per On-Demand-Anfrage abrufen (RCPREQ/RCPLIST).
+-- ============================================================
+local scanBusy=false
+local function ScanOpenTradeSkill()
+    if scanBusy or not GetTradeSkillLine or not GuildMarketDB or not GuildMarketDB.myRecipes then return end
+    local line=GetTradeSkillLine()
+    if not line or line=="UNKNOWN" then return end
+    local profIdx=ProfIdxByName(line)
+    if not profIdx then return end
+    scanBusy=true
+    -- alle Kategorien ausklappen, damit keine Rezepte fehlen
+    local i=1
+    while i<=GetNumTradeSkills() do
+        local _,skType,_,isExpanded=GetTradeSkillInfo(i)
+        if skType=="header" and not isExpanded then ExpandTradeSkillSubClass(i) else i=i+1 end
+    end
+    local names={}
+    for j=1,GetNumTradeSkills() do
+        local nm,skType=GetTradeSkillInfo(j)
+        if nm and skType~="header" then
+            local link=GetTradeSkillItemLink and GetTradeSkillItemLink(j)
+            local id=link and tonumber(link:match("item:(%d+)"))
+            names[#names+1]={n=nm,i=id}
+        end
+    end
+    scanBusy=false
+    if #names>0 then
+        local prev=GuildMarketDB.myRecipes[profIdx]
+        GuildMarketDB.myRecipes[profIdx]={r=names,ts=time()}
+        if not prev or not prev.r or #prev.r~=#names then
+            print(T.."[GuildMarkt]"..X.." "..string.format(L.PROF_SCANNED,PROF_NAMES[profIdx],#names))
+        end
+    end
+end
+local function ScanOpenCraft()
+    if scanBusy or not GetNumCrafts or not GuildMarketDB or not GuildMarketDB.myRecipes then return end
+    -- Verzauberkunst ist der einzige Craft-Beruf in TBC
+    local profIdx=ProfIdxByName(isDE and "Verzauberkunst" or "Enchanting")
+    if not profIdx then return end
+    local names={}
+    for i=1,GetNumCrafts() do
+        local nm,_,craftType=GetCraftInfo(i)
+        if nm and craftType~="header" then
+            local link=GetCraftItemLink and GetCraftItemLink(i)
+            local id=link and tonumber(link:match("item:(%d+)"))
+            names[#names+1]={n=nm,i=id}
+        end
+    end
+    if #names>0 then
+        local prev=GuildMarketDB.myRecipes[profIdx]
+        GuildMarketDB.myRecipes[profIdx]={r=names,ts=time()}
+        if not prev or not prev.r or #prev.r~=#names then
+            print(T.."[GuildMarkt]"..X.." "..string.format(L.PROF_SCANNED,PROF_NAMES[profIdx],#names))
+        end
+    end
+end
+-- Debounce: TRADE_SKILL_UPDATE feuert mehrfach beim Oeffnen; erst nach Ruhe scannen
+local scanFrame=CreateFrame("Frame",nil,UIParent)
+scanFrame:RegisterEvent("TRADE_SKILL_SHOW")
+scanFrame:RegisterEvent("TRADE_SKILL_UPDATE")
+scanFrame:RegisterEvent("CRAFT_SHOW")
+scanFrame:RegisterEvent("CRAFT_UPDATE")
+do
+    local pending,kind,acc=false,nil,0
+    scanFrame:SetScript("OnEvent",function(_,e)
+        kind=(e=="CRAFT_SHOW" or e=="CRAFT_UPDATE") and "craft" or "trade"
+        pending=true; acc=0
+    end)
+    scanFrame:SetScript("OnUpdate",function(_,dt)
+        if not pending then return end
+        acc=acc+dt; if acc<0.4 then return end
+        pending=false
+        if kind=="craft" then ScanOpenCraft() else ScanOpenTradeSkill() end
+    end)
+end
+-- Login-Erinnerung: fuer herstellbare Berufe ohne Rezept-Cache das Fenster oeffnen lassen
+local function RemindUnscannedProfs()
+    if not GuildMarketDB then return end
+    local me=UnitName("player")
+    local p=GuildMarketDB.profs and GuildMarketDB.profs[me]
+    if not p or not p.s then return end
+    local missing={}
+    for idx in pairs(p.s) do
+        if PROF_HAS_RECIPES[idx] and not (GuildMarketDB.myRecipes and GuildMarketDB.myRecipes[idx]) then
+            missing[#missing+1]=PROF_NAMES[idx]
+        end
+    end
+    if #missing>0 then
+        print(T.."[GuildMarkt]"..X.." "..string.format(L.PROF_SCAN_HINT,table.concat(missing,", ")))
+    end
+end
+
+-- ============================================================
+-- Gedrosselter Gilden-Sender (fuer laengere Rezeptlisten): 1 Nachricht/0.2s,
+-- damit ein Antwort-Schwung den Client nicht in die Server-Drossel treibt.
+-- ============================================================
+local sendQueue={}
+do
+    local acc=0
+    local qf=CreateFrame("Frame",nil,UIParent)
+    qf:SetScript("OnUpdate",function(_,dt)
+        if #sendQueue==0 then return end
+        acc=acc+dt; if acc<0.2 then return end
+        acc=0; SendGuild(table.remove(sendQueue,1))
+    end)
+end
+local function QueueGuild(msg) sendQueue[#sendQueue+1]=msg end
+
+-- ============================================================
+-- On-Demand-Rezepte: Anfrage (RCPREQ) an einen Spieler, Antwort (RCPLIST/RCPNONE).
+-- Antwort geht ans Gildennetz; nur Clients mit offener Anfrage werten sie aus.
+-- ============================================================
+-- Antwort auf eingehende RCPREQ (bin ich das Ziel?)
+local function AnswerRecipeRequest(profIdx)
+    local entry=GuildMarketDB and GuildMarketDB.myRecipes and GuildMarketDB.myRecipes[profIdx]
+    if not entry or not entry.r or #entry.r==0 then
+        SendGuild("RCPNONE|"..profIdx); return
+    end
+    -- Jeder Eintrag als "<itemID>:<name>" (ID leer bei Enchants); Eintraege per Tab getrennt
+    local parts={}
+    for _,rc in ipairs(entry.r) do
+        local nm=type(rc)=="table" and rc.n or rc
+        local id=type(rc)=="table" and rc.i or nil
+        parts[#parts+1]=(id and tostring(id) or "")..":"..(nm or "?")
+    end
+    local payload=table.concat(parts,"\t")
+    local chunks={}
+    while #payload>0 do chunks[#chunks+1]=payload:sub(1,200); payload=payload:sub(201) end
+    for i,c in ipairs(chunks) do
+        local flag=(#chunks==1 and "F") or (i==1 and "B") or (i==#chunks and "E") or "M"
+        QueueGuild("RCPLIST|"..profIdx.."|"..flag.."|"..c)
+    end
+end
+-- Requester-Seite: eine offene Anfrage + Timeout; Callback liefert names|nil,reason
+local pendingRcp=nil  -- {target,profIdx,buf,cb}
+local rcpTimeout=CreateFrame("Frame",nil,UIParent)
+do
+    local acc=0
+    rcpTimeout:SetScript("OnUpdate",function(_,dt)
+        if not pendingRcp then acc=0; return end
+        acc=acc+dt
+        if acc>=6 then
+            local cb=pendingRcp.cb; pendingRcp=nil; acc=0
+            if cb then cb(nil,"timeout") end
+        end
+    end)
+end
+function GM_RequestRecipes(target,profIdx,cb)
+    pendingRcp={target=target,profIdx=profIdx,buf="",cb=cb}
+    SendGuild("RCPREQ|"..target.."|"..profIdx)
 end
 
 -- ============================================================
@@ -2585,7 +2755,11 @@ function GM_BuildProfsFrame()
         for name,p in pairs(GuildMarketDB.profs or {}) do
             local ptext=ProfsText(p)
             local match=(st=="" or name:lower():find(st,1,true) or ptext:lower():find(st,1,true))
-            if match and ptext~="" then list[#list+1]={name=name,ptext=ptext} end
+            if match and ptext~="" then
+                local hasCraft=false
+                for idx in pairs(p.s or {}) do if PROF_HAS_RECIPES[idx] then hasCraft=true; break end end
+                list[#list+1]={name=name,ptext=ptext,hasCraft=hasCraft}
+            end
         end
         table.sort(list,function(a,b)
             if (a.name==me)~=(b.name==me) then return a.name==me end
@@ -2606,15 +2780,26 @@ function GM_BuildProfsFrame()
             local lbN=sc:CreateFontString(nil,"OVERLAY","GameFontNormal")
             lbN:SetPoint("TOPLEFT",sc,"TOPLEFT",20,-ry-2); lbN:SetSize(120,14); lbN:SetJustifyH("LEFT")
             lbN:SetText(online and W..e.name..X or Dg..e.name..X)
+            -- Rezepte-Button: bei Craft-Beruf und (online oder eigener Char); Whisper: online + fremd
+            local showRcp=e.hasCraft and (online or e.name==me)
+            local showWhisper=online and e.name~=me
+            local rightEdge = -6
+            if showWhisper then rightEdge=-90 end
+            if showRcp then rightEdge=rightEdge-72 end
             local lbP=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-            lbP:SetPoint("TOPLEFT",sc,"TOPLEFT",20,-ry-16); lbP:SetPoint("TOPRIGHT",sc,"TOPRIGHT",online and -90 or -6,-ry-16)
+            lbP:SetPoint("TOPLEFT",sc,"TOPLEFT",20,-ry-16); lbP:SetPoint("TOPRIGHT",sc,"TOPRIGHT",rightEdge,-ry-16)
             lbP:SetHeight(13); lbP:SetJustifyH("LEFT")
             lbP:SetText(T..e.ptext..X)
-            if online and e.name~=me then
+            local nm=e.name
+            if showWhisper then
                 local wb=CreateFrame("Button",nil,sc,"UIPanelButtonTemplate"); wb:SetSize(80,19)
                 wb:SetPoint("TOPRIGHT",sc,"TOPRIGHT",-4,-ry-6); wb:SetText(L.INFO_WHISPER)
-                local nm=e.name
                 wb:SetScript("OnClick",function() OpenWhisper(nm) end)
+            end
+            if showRcp then
+                local rb=CreateFrame("Button",nil,sc,"UIPanelButtonTemplate"); rb:SetSize(66,19)
+                rb:SetPoint("TOPRIGHT",sc,"TOPRIGHT",showWhisper and -88 or -4,-ry-6); rb:SetText(L.PROF_RECIPES)
+                rb:SetScript("OnClick",function() GM_ShowRecipes(nm) end)
             end
             ry=ry+30; sc:SetHeight(ry)
         end
@@ -2629,6 +2814,128 @@ function GM_BuildProfsFrame()
     end)
     RefreshProfList()
     profsFrame=f; f:Show()
+end
+
+-- ============================================================
+-- Rezept-Fenster: zeigt "was kann Spieler X" pro Beruf (On-Demand geladen)
+-- ============================================================
+local recipeFrame=nil
+function GM_ShowRecipes(playerName)
+    if recipeFrame then recipeFrame:Hide(); recipeFrame=nil end
+    local me=UnitName("player")
+    local p=GuildMarketDB.profs and GuildMarketDB.profs[playerName]
+    if not p or not p.s then return end
+    -- herstellbare Berufe dieses Spielers ermitteln
+    local craftIdx={}
+    for idx in pairs(p.s) do if PROF_HAS_RECIPES[idx] then craftIdx[#craftIdx+1]=idx end end
+    if #craftIdx==0 then return end
+    table.sort(craftIdx)
+
+    local f=CreateFrame("Frame","GuildMarketRecipeFrame",UIParent,"BasicFrameTemplateWithInset")
+    f:SetSize(400,480); f:SetPoint("CENTER",UIParent,"CENTER",200,0)
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart",f.StartMoving); f:SetScript("OnDragStop",f.StopMovingOrSizing)
+    f:SetFrameStrata("DIALOG"); f:SetFrameLevel(30)
+    f.TitleBg:SetHeight(28)
+    local titleFS=f:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+    titleFS:SetPoint("CENTER",f.TitleBg,"CENTER",0,2)
+    titleFS:SetText(G..L.PROF_RECIPES..": "..X..(IsOnline(playerName) and W or Dg)..playerName..X)
+
+    -- Berufs-Auswahlknoepfe oben
+    local selIdx=craftIdx[1]
+    local profBtns={}
+    local bx=10
+    for _,idx in ipairs(craftIdx) do
+        local b=CreateFrame("Button",nil,f,"UIPanelButtonTemplate")
+        local label=PROF_NAMES[idx]
+        b:SetSize(math.min(120,28+#label*6),22); b:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",bx,-8)
+        b:SetText(label); bx=bx+b:GetWidth()+4
+        b.idx=idx; profBtns[idx]=b
+    end
+
+    local sep=f:CreateTexture(nil,"BACKGROUND"); sep:SetHeight(1)
+    sep:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",4,-34); sep:SetPoint("TOPRIGHT",f.InsetBg,"TOPRIGHT",-4,-34)
+    sep:SetColorTexture(0.3,0.5,0.8,0.7)
+
+    local searchR=""
+    local ebSearchR=CreateFrame("EditBox","GuildMarketRcpSearchBox",f,"InputBoxTemplate")
+    ebSearchR:SetSize(160,20); ebSearchR:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",12,-40)
+    ebSearchR:SetAutoFocus(false); ebSearchR:SetMaxLetters(24)
+
+    local status=f:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+    status:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",180,-44); status:SetJustifyH("LEFT"); status:SetWidth(200)
+
+    local sfR=CreateFrame("ScrollFrame",nil,f,"UIPanelScrollFrameTemplate")
+    sfR:SetPoint("TOPLEFT",f.InsetBg,"TOPLEFT",6,-64); sfR:SetPoint("BOTTOMRIGHT",f.InsetBg,"BOTTOMRIGHT",-26,10)
+    local sc
+    local curNames=nil  -- aktuell geladene Rezeptliste (oder nil = laedt/keine)
+
+    local function DrawList()
+        if sc then sc:Hide() end
+        sc=CreateFrame("Frame",nil,sfR); sc:SetWidth(350); sc:SetHeight(20); sfR:SetScrollChild(sc)
+        if not curNames then return end
+        local st=searchR:lower()
+        local ry=0
+        for _,e in ipairs(curNames) do
+            local nm=type(e)=="table" and e.n or e
+            local id=type(e)=="table" and e.i or nil
+            if nm and (st=="" or nm:lower():find(st,1,true)) then
+                -- Klickbare Zeile: Hover zeigt den Item-Tooltip, Shift-Klick verlinkt ins Chatfenster
+                local row=CreateFrame("Button",nil,sc)
+                row:SetSize(338,15); row:SetPoint("TOPLEFT",sc,"TOPLEFT",6,-ry)
+                local fsL=row:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+                fsL:SetAllPoints(); fsL:SetJustifyH("LEFT"); fsL:SetText(W..nm..X)
+                if id then
+                    row:SetScript("OnEnter",function(self)
+                        GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
+                        GameTooltip:SetHyperlink("item:"..id); GameTooltip:Show()
+                    end)
+                    row:SetScript("OnClick",function()
+                        if IsShiftKeyDown() then
+                            local _,lnk=GetItemInfo(id)
+                            if lnk then ChatEdit_InsertLink(lnk) end
+                        end
+                    end)
+                else
+                    row:SetScript("OnEnter",function(self)
+                        GameTooltip:SetOwner(self,"ANCHOR_RIGHT"); GameTooltip:ClearLines()
+                        GameTooltip:AddLine(nm,1,1,1); GameTooltip:Show()
+                    end)
+                end
+                row:SetScript("OnLeave",function() GameTooltip:Hide() end)
+                ry=ry+15; sc:SetHeight(ry)
+            end
+        end
+        if ry==0 then
+            local h=sc:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+            h:SetPoint("TOPLEFT",sc,"TOPLEFT",6,-2); h:SetText(Dg..L.PROF_RCP_EMPTY..X); sc:SetHeight(20)
+        end
+    end
+
+    local function LoadProf(idx)
+        selIdx=idx; curNames=nil; searchR=""; ebSearchR:SetText("")
+        for i,b in pairs(profBtns) do if i==idx then b:LockHighlight() else b:UnlockHighlight() end end
+        DrawList()
+        if playerName==me then
+            -- eigene Rezepte direkt aus dem Cache
+            local rec=GuildMarketDB.myRecipes and GuildMarketDB.myRecipes[idx]
+            if rec and rec.r then curNames=rec.r; status:SetText(Dg..#rec.r.." "..L.PROF_RECIPES..X)
+            else status:SetText(R..string.format(L.PROF_RCP_NONE,playerName)..X) end
+            DrawList(); return
+        end
+        status:SetText(T..L.PROF_RCP_LOADING..X)
+        GM_RequestRecipes(playerName,idx,function(names,reason)
+            if not f:IsShown() or selIdx~=idx then return end
+            if names then curNames=names; status:SetText(Dg..#names.." "..L.PROF_RECIPES..X); DrawList()
+            elseif reason=="none" then status:SetText(R..string.format(L.PROF_RCP_NONE,playerName)..X)
+            else status:SetText(R..L.PROF_RCP_TIMEOUT..X) end
+        end)
+    end
+    for idx,b in pairs(profBtns) do b:SetScript("OnClick",function(self) LoadProf(self.idx) end) end
+    ebSearchR:SetScript("OnTextChanged",function(self,user) if user then searchR=self:GetText(); DrawList() end end)
+
+    recipeFrame=f; f:Show()
+    LoadProf(selIdx)
 end
 
 -- ============================================================
@@ -3595,6 +3902,7 @@ ev:SetScript("OnEvent",function(self,event,...)
         DelayCall(6,function() SendGuild("HELLO"); BroadcastMine(); GM_RequestSync(); BroadcastEvents(); SendGuild("EVTREQ"); SendGuild("DKPREQ"); SendGuild("AUCREQ"); SendGuild("MSHREQ"); SendGuild("PROFREQ"); SendGuild("BRDREQ") end)
         CreateMinimapButton()
         DelayCall(8,ScanOwnProfs)
+        DelayCall(20,RemindUnscannedProfs)
         DelayCall(12,PrintTodaysEvents)
         DelayCall(14,ShowBoardPopup)
         DelayCall(15,CheckDkpDecay)
@@ -3652,6 +3960,37 @@ ev:SetScript("OnEvent",function(self,event,...)
             end
             if next(skills) then
                 GuildMarketDB.profs[sn]={s=skills,ts=time()}
+            end; return
+        end
+        -- ── Rezept-Protokoll (On-Demand) ────────────────────────
+        if msg:sub(1,6)=="RCPREQ" then
+            local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
+            local target,profIdx=p[2],tonumber(p[3])
+            if target==UnitName("player") and profIdx then AnswerRecipeRequest(profIdx) end
+            return
+        end
+        if msg:sub(1,7)=="RCPNONE" then
+            local profIdx=tonumber(msg:sub(9))
+            if pendingRcp and pendingRcp.target==sn and pendingRcp.profIdx==profIdx then
+                local cb=pendingRcp.cb; pendingRcp=nil; if cb then cb(nil,"none") end
+            end; return
+        end
+        if msg:sub(1,7)=="RCPLIST" then
+            local p={}; for v in (msg.."|"):gmatch("([^|]*)|") do p[#p+1]=v end
+            local profIdx,flag=tonumber(p[2]),p[3]
+            if pendingRcp and pendingRcp.target==sn and pendingRcp.profIdx==profIdx and flag then
+                if flag=="B" or flag=="F" then pendingRcp.buf="" end
+                pendingRcp.buf=(pendingRcp.buf or "")..(p[4] or "")
+                if flag=="E" or flag=="F" then
+                    local names={}
+                    for seg in (pendingRcp.buf.."\t"):gmatch("([^\t]+)\t") do
+                        local ids,nm=seg:match("^(%d*):(.*)$")
+                        if nm and nm~="" then names[#names+1]={n=nm,i=(ids~="" and tonumber(ids) or nil)}
+                        else names[#names+1]={n=seg} end
+                    end
+                    local cb=pendingRcp.cb; pendingRcp=nil
+                    if cb then cb(names) end
+                end
             end; return
         end
         -- ── Schwarzes-Brett-Protokoll ───────────────────────────

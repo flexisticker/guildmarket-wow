@@ -1,6 +1,6 @@
 # GuildMarket — Marketplace, Guild Calendar, DKP, Merch Shop & More
 
-**GuildMarket** is the all-in-one guild toolkit for WoW TBC Classic Anniversary and Classic Era: a guild-internal marketplace, an event calendar for dungeons and raids with role signups and recurring events, a full DKP point system with attendance tracking, decay and loot auctions, a merch shop, a profession directory, and a guild announcement board — no external server required, everything is peer-to-peer via guild addon messages.
+**GuildMarket** is the all-in-one guild toolkit for WoW TBC Classic Anniversary and Classic Era: a guild-internal marketplace, an event calendar for dungeons and raids with role signups and recurring events, a full DKP point system with attendance tracking, decay and loot auctions, a merch shop, a searchable profession directory with recipe lists, and a guild announcement board — no external server required, everything is peer-to-peer via guild addon messages.
 
 ---
 
@@ -45,6 +45,8 @@
 
 - **Fully automatic**: your professions (including cooking, first aid, fishing) are detected from your skill lines at login and synced — nobody has to maintain anything
 - **Searchable**: find out in seconds who can craft what ("who has Enchanting?"), with skill level, online status, and whisper button
+- **Recipe lists on demand**: open a crafter's profession with one click to see exactly what they can make — the list is requested live from the player, searchable, with a full item tooltip on hover and shift-click to link an item into chat
+- Your own recipes are scanned automatically when you open your profession window; a login reminder nudges you to open any window that hasn't been scanned yet
 - **Language-neutral sync**: mixed German/English guilds each see profession names in their own language
 
 ## 📌 Guild Board

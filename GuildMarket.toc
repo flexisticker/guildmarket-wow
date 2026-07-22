@@ -3,7 +3,7 @@
 ## Notes: Guild-internal marketplace — WTB/WTS/Service listings via guild sync
 ## Notes-deDE: Gildeninterner Marktplatz — Suche/Biete/Dienst via Gildensync
 ## Author: MichaModus
-## Version: 1.1.1-beta
+## Version: 1.2.0-beta
 ## X-Curse-Project-ID: 1589741
 ## DefaultState: Enabled
 ## X-GitHub: https://github.com/flexisticker/guildmarket-wow
